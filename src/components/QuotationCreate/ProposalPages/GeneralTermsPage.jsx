@@ -75,7 +75,7 @@ export default function GeneralTermsPage() {
         <div className="flex justify-end w-full mb-3">
           <img
             src="/Logo.PNG"
-            alt="RBP Logo"
+            // alt="RBP Logo"
             crossOrigin="anonymous"
             style={{
               height: "40px",

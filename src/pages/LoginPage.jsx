@@ -165,7 +165,7 @@ useEffect(() => {
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-32 h-16  mb-4 ">
               {/* <Zap className="w-8 h-8 text-white" /> */}
-              <img src="/Logo.PNG" alt="Company Logo" />
+              <img src="/Logo.PNG"  />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Market Mode</h1>
           </div>

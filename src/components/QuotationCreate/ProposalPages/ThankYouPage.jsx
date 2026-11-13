@@ -69,7 +69,7 @@ export default function ThankYouPage() {
         >
           <img
             src="/Logo.PNG"
-            alt="RBP Logo"
+            // alt="RBP Logo"
             crossOrigin="anonymous"
             style={{
               height: "54px",

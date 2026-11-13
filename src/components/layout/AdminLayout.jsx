@@ -488,7 +488,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode }) {
             <div className="w-14 h-14 overflow-hidden rounded">
               <img
                 src="/Logo.PNG"
-                alt="RBP Logo"
+                // alt="Company Logo "
                 className="w-full h-full object-contain"
               />
             </div>

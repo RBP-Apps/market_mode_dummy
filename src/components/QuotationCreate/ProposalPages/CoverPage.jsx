@@ -136,7 +136,7 @@ export default function CoverPage({ formData }) {
         >
           <img
             src="/Logo.PNG"
-            alt="RBP Logo"
+            // alt="RBP Logo"
             crossOrigin="anonymous"
             className="object-contain"
             style={{

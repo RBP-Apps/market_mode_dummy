@@ -60,7 +60,7 @@ export default function ScopeOfWorkPage() {
         <div className="flex justify-end w-full mb-4">
           <img
             src="/Logo.PNG"
-            alt="RBP Logo"
+            // alt="RBP Logo"
             crossOrigin="anonymous"
             style={{
               height: "42px",
