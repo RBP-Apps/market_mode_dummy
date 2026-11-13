@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, User, Wrench } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 
 // Configuration object
@@ -77,7 +77,7 @@ function IPAssignmentPage() {
       // 🔹 1. fetch ip_assignments and quotation in parallel
       const [{ data: ipData, error: ipError }, { data: quotationData, error: quotationError }] =
         await Promise.all([
-          supabase
+          db
             .from("ip_assignments")
             .select(`
               *,
@@ -90,7 +90,7 @@ function IPAssignmentPage() {
               )
             `)
             .not("planned", "is", null),
-          supabase
+          db
             .from("new_quatation_create")
             .select("*"),
         ])
@@ -243,7 +243,7 @@ function IPAssignmentPage() {
         ip_contact: ipForm.contactNumberOfIP,
       }
 
-      const { error } = await supabase
+      const { error } = await db
         .from("ip_assignments")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord.enquiryNumber)

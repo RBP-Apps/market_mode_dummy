@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, CreditCard, Calendar, Wrench, ShieldCheck, Loader2 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 
 // Configuration object
@@ -83,7 +83,7 @@ function InsurancePage() {
 
     const fetchDropdownOptions = useCallback(async () => {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await db
                 .from("dropdown")
                 .select("stage")
 
@@ -109,7 +109,7 @@ function InsurancePage() {
 
             await fetchDropdownOptions()
 
-            const { data, error } = await supabase
+            const { data, error } = await db
                 .from("project_insurance")
                 .select(`
                     *,
@@ -230,7 +230,7 @@ function InsurancePage() {
                         ? new Date().toISOString()
                         : null
 
-                return supabase
+                return db
                     .from("project_insurance")
                     .update({
                         status: status,
@@ -285,7 +285,7 @@ function InsurancePage() {
         try {
             const status = "Done"
 
-            const { error } = await supabase
+            const { error } = await db
                 .from("project_insurance")
                 .update({
                     status: status,

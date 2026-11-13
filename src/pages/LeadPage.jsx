@@ -21,7 +21,7 @@ import {
   ArrowDown
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -158,29 +158,29 @@ export default function LeadPage() {
         { data: subRedData },
         { data: insData }
       ] = await Promise.all([
-        supabase.from("enquiries").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("fms").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("payments").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("login").select("id, username, name, role, page, department").then(r => r).catch(() => ({ data: [] })),
-        supabase.from("assign_survey").select("*, enquiries:enquiry_id(*)").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("assign_survey_actual").select("*, enquiries:enquiry_id(*)").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("new_quatation_create").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("new_new_quatation_create").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("quatation_10kw").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("site_surveys").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("ip_assignments").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("sales_calls").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("documents_uploads").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("registration").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("payment_confirmations").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("dispatch_planner").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("dispatch_materials").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("installations").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("qc").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("inspections").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("subsidy_disbursals").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("subsidy_redemptions").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
-        supabase.from("project_insurance").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] }))
+        db.from("enquiries").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("fms").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("payments").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("login").select("id, username, name, role, page, department").then(r => r).catch(() => ({ data: [] })),
+        db.from("assign_survey").select("*, enquiries:enquiry_id(*)").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("assign_survey_actual").select("*, enquiries:enquiry_id(*)").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("new_quatation_create").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("new_new_quatation_create").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("quatation_10kw").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("site_surveys").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("ip_assignments").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("sales_calls").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("documents_uploads").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("registration").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("payment_confirmations").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("dispatch_planner").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("dispatch_materials").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("installations").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("qc").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("inspections").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("subsidy_disbursals").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("subsidy_redemptions").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] })),
+        db.from("project_insurance").select("*").order("id", { ascending: false }).then(r => r).catch(() => ({ data: [] }))
       ])
 
       const mappedLeads = (enqData || []).map((row) => ({

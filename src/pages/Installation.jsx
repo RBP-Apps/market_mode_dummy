@@ -4,7 +4,7 @@ import {
   Sun, Zap, Shield, Cpu 
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 import { useState, useEffect, useCallback, useMemo } from "react"
 const CONFIG = {
   PAGE_CONFIG: {
@@ -221,7 +221,7 @@ const fetchDropdownOptions = useCallback(async () => {
   try {
     setDropdownLoading(true)
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("dropdown")
       .select("*")
 
@@ -270,7 +270,7 @@ const fetchSheetData = useCallback(async () => {
     setLoading(true)
     setError(null)
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("installations")
       .select(`
         *,
@@ -509,13 +509,13 @@ const uploadImageToDrive = useCallback(async (file) => {
     const fileName = `${selectedRecord.enquiryNumber}_${Date.now()}.${fileExt}`
     const filePath = `installation/${fileName}`
 
-    const { error } = await supabase.storage
+    const { error } = await db.storage
       .from("IP_assignment")
       .upload(filePath, file)
 
     if (error) throw error
 
-    const { data } = supabase.storage
+    const { data } = db.storage
       .from("IP_assignment")
       .getPublicUrl(filePath)
 
@@ -547,13 +547,13 @@ const uploadImageToDrive = useCallback(async (file) => {
           const fileName = `${enquiryNum}_${cat}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
           const filePath = `installation/complete_docs/${fileName}`
 
-          const { error: uploadErr } = await supabase.storage
+          const { error: uploadErr } = await db.storage
             .from("IP_assignment")
             .upload(filePath, item.file)
 
           if (uploadErr) throw uploadErr
 
-          const { data: publicData } = supabase.storage
+          const { data: publicData } = db.storage
             .from("IP_assignment")
             .getPublicUrl(filePath)
 
@@ -863,7 +863,7 @@ const handleInstallSubmit = async () => {
       dataPlan: installForm.dataPlan || "",
     }
 
-    const { error } = await supabase
+    const { error } = await db
       .from("installations")
       .update({
         actual: actualDate,

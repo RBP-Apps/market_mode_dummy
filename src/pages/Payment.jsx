@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, CreditCard, Wrench, Upload, FileText, Loader2 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Configuration object
 const CONFIG = {
@@ -146,7 +146,7 @@ function PaymentPage() {
 
   const fetchDropdownOptions = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("dropdown")
         .select("stage")
 
@@ -175,7 +175,7 @@ function PaymentPage() {
         { data: fmsData, error: fmsError },
         { data: salesCallsData, error: salesError }
       ] = await Promise.all([
-        supabase
+        db
           .from("payments")
           .select(`
             *,
@@ -187,10 +187,10 @@ function PaymentPage() {
             )
           `)
           .not("planned", "is", null),
-        supabase
+        db
           .from("fms")
           .select("enquiry_number, surveyor_name, power_purchase_agreement, vendor_consumer_agreement, quotation_copy, application_copy, electricity_bill_doc, witness_id_proof, actual_12, status_13, status_14, status_15"),
-        supabase
+        db
           .from("sales_calls")
           .select("enquiry_number, planned, actual")
           .not("planned", "is", null)
@@ -382,12 +382,12 @@ function PaymentPage() {
     [formatDateForInput],
   )
 
-  const uploadFileToSupabase = useCallback(async (file, prefix) => {
+  const uploadFileToStorage = useCallback(async (file, prefix) => {
     try {
       const fileExt = file.name.split(".").pop()
       const fileName = `${prefix}_${selectedRecord.enquiryNumber}_${Date.now()}.${fileExt}`
 
-      const { data, error } = await supabase.storage
+      const { data, error } = await db.storage
         .from("enquery_file")
         .upload(fileName, file, {
           cacheControl: "3600",
@@ -396,7 +396,7 @@ function PaymentPage() {
 
       if (error) throw error
 
-      const { data: publicUrl } = supabase.storage
+      const { data: publicUrl } = db.storage
         .from("enquery_file")
         .getPublicUrl(fileName)
 
@@ -453,7 +453,7 @@ function PaymentPage() {
             ...prev,
             [field.name]: { ...prev[field.name], uploading: true }
           }))
-          fileUrl = await uploadFileToSupabase(paymentForm[field.name], field.prefix)
+          fileUrl = await uploadFileToStorage(paymentForm[field.name], field.prefix)
           setFileUploads(prev => ({
             ...prev,
             [field.name]: {
@@ -493,7 +493,7 @@ function PaymentPage() {
         status: "Done"
       }
 
-      const { error } = await supabase
+      const { error } = await db
         .from("payments")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord._enquiryNumber)

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import { Search, Plus, Edit2, Trash2, X, AlertCircle, CheckCircle2, ChevronDown, Filter, RotateCcw } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 export default function ProductListPage() {
   const [products, setProducts] = useState([])
@@ -79,7 +79,7 @@ export default function ProductListPage() {
     try {
       setLoading(true)
       setError(null)
-      const { data, error: fetchErr } = await supabase
+      const { data, error: fetchErr } = await db
         .from("product_list")
         .select("*")
         .order("id", { ascending: true })
@@ -176,7 +176,7 @@ export default function ProductListPage() {
         state_subsidy: formData.state_subsidy ? parseFloat(formData.state_subsidy) : null
       }
 
-      const { error: insertErr } = await supabase
+      const { error: insertErr } = await db
         .from("product_list")
         .insert([payload])
 
@@ -218,7 +218,7 @@ export default function ProductListPage() {
         state_subsidy: formData.state_subsidy ? parseFloat(formData.state_subsidy) : null
       }
 
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await db
         .from("product_list")
         .update(payload)
         .eq("id", selectedProduct.id)
@@ -243,7 +243,7 @@ export default function ProductListPage() {
     setError(null)
 
     try {
-      const { error: deleteErr } = await supabase
+      const { error: deleteErr } = await db
         .from("product_list")
         .delete()
         .eq("id", selectedProduct.id)

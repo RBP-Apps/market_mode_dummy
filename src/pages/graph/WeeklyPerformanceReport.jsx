@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDeviceContext } from './DeviceContext'; // Corrected path
 import AdminLayout from '../../components/layout/AdminLayout';
-import supabase from '../../utils/supabase';
+import db from "../../services/storageService"
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -889,7 +889,7 @@ const WeeklyPerformanceReport = () => {
   }
 
   setSyncLoading(true);
-  showToast("Syncing data to Supabase...", "info");
+  showToast("Syncing data to Local Storage...", "info");
 
   try {
     const syncData = [];
@@ -918,8 +918,8 @@ const WeeklyPerformanceReport = () => {
       throw new Error("No valid data to sync (all records have errors)");
     }
 
-    // 🔥 Supabase Insert
-    const { data, error } = await supabase
+    // 🔥 Local Storage Insert
+    const { data, error } = await db
       .from("Weekly_Performance_Logs")
       .insert(syncData);
 
@@ -933,14 +933,14 @@ const WeeklyPerformanceReport = () => {
       count: syncData.length,
       totalRows: syncData.length,
       timestamp: new Date(),
-      format: 'supabase'
+      format: 'storage'
     };
 
     setSyncStatus(syncInfo);
     setCachedData(CACHE_KEYS.SYNC_INFO, JSON.stringify(syncInfo));
     setCachedData(CACHE_KEYS.LAST_CSV_SYNC, Date.now().toString());
 
-    showToast(`✓ Synced ${syncData.length} records to Supabase`, "success", 6000);
+    showToast(`✓ Synced ${syncData.length} records to Local Storage`, "success", 6000);
 
     return { success: true };
 

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, Upload, X, Search, History, ArrowLeft, FileText, MapPin, Users, Phone, Zap, Building, Eye, DollarSign, Clock, Home, Wrench } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Configuration object
 const CONFIG = {
@@ -100,7 +100,7 @@ function FMSDataPage() {
   // Fetch dropdown values for status
   const fetchDropdownValues = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("dropdown")
         .select("status");
 
@@ -126,7 +126,7 @@ function FMSDataPage() {
 
       await fetchDropdownValues();
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("site_surveys")
         .select(`
           *,
@@ -282,13 +282,13 @@ function FMSDataPage() {
       const fileName = `${selectedRecord._enquiryNumber}_${Date.now()}.${fileExt}`;
       const filePath = `survey/${fileName}`;
 
-      const { error } = await supabase.storage
+      const { error } = await db.storage
         .from("survey_file")
         .upload(filePath, file);
 
       if (error) throw error;
 
-      const { data } = supabase.storage
+      const { data } = db.storage
         .from("survey_file")
         .getPublicUrl(filePath);
 
@@ -370,7 +370,7 @@ function FMSDataPage() {
         updatePayload.actual = new Date().toISOString();
       }
 
-      const { error } = await supabase
+      const { error } = await db
         .from("site_surveys")
         .update(updatePayload)
         .eq("id", selectedRecord._rowIndex);

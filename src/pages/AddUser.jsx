@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
-import supabase from "../utils/supabase";
+import db from "../services/storageService"
 import AdminLayout from "../components/layout/AdminLayout";
 
 export default function UserRegistration() {
@@ -270,7 +270,7 @@ export default function UserRegistration() {
   // ================= FETCH USERS =================
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("login")
         .select("*")
         .order("created_at", { ascending: false });
@@ -285,7 +285,7 @@ export default function UserRegistration() {
   // ================= FETCH MASTER DATA =================
   const fetchMasterData = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("master_hr")
         .select("*")
         .order("created_at", { ascending: false });
@@ -465,7 +465,7 @@ export default function UserRegistration() {
 
     setIsCreating(true);
     try {
-      const { error } = await supabase.from("login").insert([payload]);
+      const { error } = await db.from("login").insert([payload]);
 
       if (error) throw error;
 
@@ -545,7 +545,7 @@ export default function UserRegistration() {
 
     setIsUpdating(true);
     try {
-      const { error } = await supabase
+      const { error } = await db
         .from("login")
         .update(payload)
         .eq("id", editUserId);
@@ -572,7 +572,7 @@ export default function UserRegistration() {
     if (!confirm("Delete this user?")) return;
 
     try {
-      const { error } = await supabase.from("login").delete().eq("id", id);
+      const { error } = await db.from("login").delete().eq("id", id);
 
       if (error) throw error;
 

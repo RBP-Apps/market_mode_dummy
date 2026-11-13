@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, Package, Wrench } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 
 // Configuration object
@@ -122,7 +122,7 @@ function SubsidyDisbursalPage() {
   // Fetch dropdown options from "Drop-Down Value" sheet Column H2:H
 const fetchDropdownOptions = useCallback(async () => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("dropdown")
       .select("stage")
 
@@ -154,7 +154,7 @@ const fetchSheetData = useCallback(async () => {
       { data: sdData, error: sdError },
       { data: fmsData, error: fmsError }
     ] = await Promise.all([
-      supabase
+      db
         .from("subsidy_disbursals")
         .select(`
           *,
@@ -165,7 +165,7 @@ const fetchSheetData = useCallback(async () => {
           )
         `)
         .not("planned", "is", null),
-      supabase
+      db
         .from("fms")
         .select("enquiry_number, surveyor_name, power_purchase_agreement, vendor_consumer_agreement, quotation_copy, application_copy, electricity_bill_doc, witness_id_proof, actual_12, status_13")
     ])
@@ -353,7 +353,7 @@ const handleSubsidySubmit = async () => {
         ? (selectedRecord.actual || new Date().toISOString())
         : null
 
-    const { error } = await supabase
+    const { error } = await db
       .from("subsidy_disbursals")
       .update({
         status: status,
@@ -424,7 +424,7 @@ const handleSubmit = async () => {
       const centralVal = centralSubsidyValues[recordId] !== undefined ? centralSubsidyValues[recordId] : record.centralSubsidy
       const stateVal = stateSubsidyValues[recordId] !== undefined ? stateSubsidyValues[recordId] : record.stateSubsidy
 
-      return supabase
+      return db
         .from("subsidy_disbursals")
         .update({
           status: status,

@@ -1,6 +1,6 @@
 "use client"
 
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Configuration object - Only keeping page text
 const CONFIG = {
@@ -73,10 +73,10 @@ function FMSDataPage() {
     setUsername(user || "")
   }, [])
 
-  // Fetch dropdown values for status from Supabase
+  // Fetch dropdown values for status from Local Storage
   const fetchDropdownValues = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('dropdown')
         .select('status')
 
@@ -90,7 +90,7 @@ function FMSDataPage() {
     }
   }, [])
 
-  // Optimized data fetching from Supabase
+  // Optimized data fetching from Local Storage
   const fetchSheetData = useCallback(async () => {
     try {
       setLoading(true)
@@ -99,7 +99,7 @@ function FMSDataPage() {
       // Fetch dropdown values and data in parallel
       await fetchDropdownValues();
 
-      const { data: rows, error: fmsError } = await supabase
+      const { data: rows, error: fmsError } = await db
         .from('fms')
         .select('*, new_quatation_create!left(*)')
 
@@ -158,7 +158,7 @@ function FMSDataPage() {
       setHistoryData(history)
       setLoading(false)
     } catch (error) {
-      console.error("Error fetching Supabase data:", error)
+      console.error("Error fetching Local Storage data:", error)
       setError("Failed to load data: " + error.message)
       setLoading(false)
     }
@@ -211,13 +211,13 @@ function FMSDataPage() {
     async (file) => {
       try {
         const filePath = `${selectedRecord._enquiryNumber}_quotation_${Date.now()}.${file.name.split(".").pop()}`
-        const { data, error } = await supabase.storage
+        const { data, error } = await db.storage
           .from("Quotation_file")
           .upload(filePath, file)
 
         if (error) throw error
 
-        const { data: urlData } = supabase.storage
+        const { data: urlData } = db.storage
           .from("Quotation_file")
           .getPublicUrl(filePath)
 
@@ -245,8 +245,8 @@ function FMSDataPage() {
         quotationCopyUrl = await uploadQuotationFile(quotationForm.quotationCopy)
       }
 
-      // Update data in Supabase new_quatation_create table
-      const { error } = await supabase
+      // Update data in Local Storage new_quatation_create table
+      const { error } = await db
         .from('new_quatation_create')
         .update({
           actual: new Date().toISOString(),

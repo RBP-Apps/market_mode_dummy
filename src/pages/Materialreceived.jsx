@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, Package, Wrench } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Configuration object
 const CONFIG = {
@@ -98,7 +98,7 @@ function MaterialReceivedSitePage() {
       // 🔹 1. fetch material_receipts and quotation in parallel
       const [{ data: mrData, error: mrError }, { data: quotationData, error: quotationError }] =
         await Promise.all([
-          supabase
+          db
             .from("material_receipts")
             .select(`
               *,
@@ -111,7 +111,7 @@ function MaterialReceivedSitePage() {
               )
             `)
             .not("planned", "is", null),
-          supabase
+          db
             .from("new_quatation_create")
             .select("*"),
         ])
@@ -232,13 +232,13 @@ function MaterialReceivedSitePage() {
       const fileName = `${selectedRecord.enquiryNumber}_${Date.now()}.${fileExt}`
       const filePath = `receipt/${fileName}`
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await db.storage
         .from("IP_assignment")
         .upload(filePath, file)
 
       if (uploadError) throw uploadError
 
-      const { data } = supabase.storage
+      const { data } = db.storage
         .from("IP_assignment")
         .getPublicUrl(filePath)
 
@@ -362,7 +362,7 @@ function MaterialReceivedSitePage() {
     try {
       const actualDate = new Date().toISOString().split("T")[0]
 
-      const { error } = await supabase
+      const { error } = await db
         .from("material_receipts")
         .update({
           actual: actualDate,

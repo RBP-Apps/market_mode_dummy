@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, Receipt, Calendar, Wrench } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Updated Configuration object
 const CONFIG = {
@@ -125,7 +125,7 @@ const fetchSheetData = useCallback(async () => {
     setLoading(true)
     setError(null)
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("billings")
       .select(`
         *,
@@ -334,13 +334,13 @@ const uploadImageToDrive = useCallback(async (file) => {
   try {
     const fileName = `${selectedRecord._enquiryNumber}_${Date.now()}_${file.name}`
 
-    const { data, error } = await supabase.storage
+    const { data, error } = await db.storage
       .from("IP_assignment")
       .upload(fileName, file)
 
     if (error) throw error
 
-    const { data: publicUrl } = supabase.storage
+    const { data: publicUrl } = db.storage
       .from("IP_assignment")
       .getPublicUrl(fileName)
 
@@ -383,7 +383,7 @@ const handleBillingSubmit = async () => {
       actual: new Date().toISOString(),
     }
 
-    const { error } = await supabase
+    const { error } = await db
       .from("billings")
       .update(updatePayload)
       .eq("enquiry_number", selectedRecord._enquiryNumber)

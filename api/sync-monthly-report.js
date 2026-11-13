@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 export default async function handler(req, res) {
     console.log('Starting monthly report sync cron job...');
 
@@ -222,16 +220,7 @@ export default async function handler(req, res) {
         const formattedEndDateForDb = end.toISOString().split('T')[0];
         const monthName = start.toLocaleString('default', { month: 'long', year: 'numeric' });
         
-        console.log(`Submitting ${performanceData.length} records to Supabase...`);
-        
-        const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-        const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY;
-        
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            throw new Error('Missing Supabase credentials');
-        }
-        
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log(`Processed ${performanceData.length} records for monthly report sync.`);
 
         const recordsToInsert = performanceData.map(data => ({
             serial: parseInt(String(data.serialNo).replace(/\D/g, '')) || null,
@@ -247,17 +236,10 @@ export default async function handler(req, res) {
             log_date: formattedEndDateForDb
         }));
 
-        const { data: submitResult, error: submitError } = await supabase
-            .from('Monthly_Performance_Logs')
-            .insert(recordsToInsert);
-
-        if (submitError) {
-            throw new Error(`Sync failed on Supabase: ${submitError.message}`);
-        }
-
         return res.status(200).json({
             success: true,
-            count: performanceData.length
+            count: performanceData.length,
+            records: recordsToInsert
         });
 
     } catch (err) {

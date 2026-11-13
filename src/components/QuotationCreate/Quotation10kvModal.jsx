@@ -20,7 +20,6 @@ import PriceSchedulePage from "./ProposalPages/PriceSchedulePage";
 import GeneralTermsPage from "./ProposalPages/GeneralTermsPage";
 import AcceptancePage from "./ProposalPages/AcceptancePage";
 import ThankYouPage from "./ProposalPages/ThankYouPage";
-import supabase from "../../utils/supabase";
 
 // ─── Number to Words (Indian System) ─────────────────────────────────────────
 function toWords(num) {

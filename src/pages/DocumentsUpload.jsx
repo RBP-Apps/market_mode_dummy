@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, Eye, User, FileText, Upload, Calendar, Edit2, AlertCircle } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Page configuration
 const CONFIG = {
@@ -79,7 +79,7 @@ export default function DocumentsUpload() {
         { data, error: fetchError },
         { data: paymentsData }
       ] = await Promise.all([
-        supabase
+        db
           .from("documents_uploads")
           .select(`
             *,
@@ -92,7 +92,7 @@ export default function DocumentsUpload() {
             )
           `)
           .not("planned", "is", null),
-        supabase
+        db
           .from("payments")
           .select("enquiry_number, planned, actual")
           .then(r => r)
@@ -267,12 +267,12 @@ export default function DocumentsUpload() {
     }))
   }, [])
 
-  const uploadFileToSupabase = useCallback(async (file, prefix) => {
+  const uploadFileToStorage = useCallback(async (file, prefix) => {
     try {
       const fileExt = file.name.split(".").pop()
       const fileName = `${prefix}_${selectedRecord.enquiryNumber}_${Date.now()}.${fileExt}`
 
-      const { data, error } = await supabase.storage
+      const { data, error } = await db.storage
         .from("enquery_file")
         .upload(fileName, file, {
           cacheControl: "3600",
@@ -281,7 +281,7 @@ export default function DocumentsUpload() {
 
       if (error) throw error
 
-      const { data: publicUrl } = supabase.storage
+      const { data: publicUrl } = db.storage
         .from("enquery_file")
         .getPublicUrl(fileName)
 
@@ -299,49 +299,49 @@ export default function DocumentsUpload() {
       let electricityBillUrl = surveyForm.electricityBill
       if (surveyForm.electricityBill instanceof File) {
         setFileUploads(prev => ({ ...prev, electricityBill: { ...prev.electricityBill, uploading: true } }))
-        electricityBillUrl = await uploadFileToSupabase(surveyForm.electricityBill, "elec_bill")
+        electricityBillUrl = await uploadFileToStorage(surveyForm.electricityBill, "elec_bill")
         setFileUploads(prev => ({ ...prev, electricityBill: { ...prev.electricityBill, uploading: false, uploaded: true, url: electricityBillUrl } }))
       }
 
       let addressProofUrl = surveyForm.addressProof
       if (surveyForm.addressProof instanceof File) {
         setFileUploads(prev => ({ ...prev, addressProof: { ...prev.addressProof, uploading: true } }))
-        addressProofUrl = await uploadFileToSupabase(surveyForm.addressProof, "addr_proof")
+        addressProofUrl = await uploadFileToStorage(surveyForm.addressProof, "addr_proof")
         setFileUploads(prev => ({ ...prev, addressProof: { ...prev.addressProof, uploading: false, uploaded: true, url: addressProofUrl } }))
       }
 
       let panCardCopyUrl = surveyForm.panCardCopy
       if (surveyForm.panCardCopy instanceof File) {
         setFileUploads(prev => ({ ...prev, panCardCopy: { ...prev.panCardCopy, uploading: true } }))
-        panCardCopyUrl = await uploadFileToSupabase(surveyForm.panCardCopy, "pan_card")
+        panCardCopyUrl = await uploadFileToStorage(surveyForm.panCardCopy, "pan_card")
         setFileUploads(prev => ({ ...prev, panCardCopy: { ...prev.panCardCopy, uploading: false, uploaded: true, url: panCardCopyUrl } }))
       }
 
       let aadharCardCopyUrl = surveyForm.aadharCardCopy
       if (surveyForm.aadharCardCopy instanceof File) {
         setFileUploads(prev => ({ ...prev, aadharCardCopy: { ...prev.aadharCardCopy, uploading: true } }))
-        aadharCardCopyUrl = await uploadFileToSupabase(surveyForm.aadharCardCopy, "aadhar_card")
+        aadharCardCopyUrl = await uploadFileToStorage(surveyForm.aadharCardCopy, "aadhar_card")
         setFileUploads(prev => ({ ...prev, aadharCardCopy: { ...prev.aadharCardCopy, uploading: false, uploaded: true, url: aadharCardCopyUrl } }))
       }
 
       let bankDocumentCopyUrl = surveyForm.bankDocumentCopy
       if (surveyForm.bankDocumentCopy instanceof File) {
         setFileUploads(prev => ({ ...prev, bankDocumentCopy: { ...prev.bankDocumentCopy, uploading: true } }))
-        bankDocumentCopyUrl = await uploadFileToSupabase(surveyForm.bankDocumentCopy, "bank_doc")
+        bankDocumentCopyUrl = await uploadFileToStorage(surveyForm.bankDocumentCopy, "bank_doc")
         setFileUploads(prev => ({ ...prev, bankDocumentCopy: { ...prev.bankDocumentCopy, uploading: false, uploaded: true, url: bankDocumentCopyUrl } }))
       }
 
       let propertyTaxReceiptUrl = surveyForm.propertyTaxReceipt
       if (surveyForm.propertyTaxReceipt instanceof File) {
         setFileUploads(prev => ({ ...prev, propertyTaxReceipt: { ...prev.propertyTaxReceipt, uploading: true } }))
-        propertyTaxReceiptUrl = await uploadFileToSupabase(surveyForm.propertyTaxReceipt, "prop_tax")
+        propertyTaxReceiptUrl = await uploadFileToStorage(surveyForm.propertyTaxReceipt, "prop_tax")
         setFileUploads(prev => ({ ...prev, propertyTaxReceipt: { ...prev.propertyTaxReceipt, uploading: false, uploaded: true, url: propertyTaxReceiptUrl } }))
       }
 
       let sitePreInstallationUrl = surveyForm.sitePreInstallation
       if (surveyForm.sitePreInstallation instanceof File) {
         setFileUploads(prev => ({ ...prev, sitePreInstallation: { ...prev.sitePreInstallation, uploading: true } }))
-        sitePreInstallationUrl = await uploadFileToSupabase(surveyForm.sitePreInstallation, "site_pre_inst")
+        sitePreInstallationUrl = await uploadFileToStorage(surveyForm.sitePreInstallation, "site_pre_inst")
         setFileUploads(prev => ({ ...prev, sitePreInstallation: { ...prev.sitePreInstallation, uploading: false, uploaded: true, url: sitePreInstallationUrl } }))
       }
 
@@ -362,7 +362,7 @@ export default function DocumentsUpload() {
         site_pre_installation: sitePreInstallationUrl || null
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("documents_uploads")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord.enquiryNumber)

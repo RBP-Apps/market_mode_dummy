@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, Bell } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 // Updated Configuration object
 const CONFIG = {
 
@@ -59,7 +59,7 @@ function InformToCustomerPage() {
   // Fetch dropdown options from "Drop-Down Value" sheet Column H2:H
   const fetchDropdownOptions = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("dropdown")
         .select("status")
 
@@ -89,7 +89,7 @@ function InformToCustomerPage() {
       // 🔹 1. fetch customer_notifications and quotation in parallel
       const [{ data: cnData, error: cnError }, { data: quotationData, error: quotationError }] =
         await Promise.all([
-          supabase
+          db
             .from("customer_notifications")
             .select(`
               *,
@@ -102,7 +102,7 @@ function InformToCustomerPage() {
               )
             `)
             .not("planned", "is", null),
-          supabase
+          db
             .from("new_quatation_create")
             .select("*"),
         ])
@@ -274,7 +274,7 @@ function InformToCustomerPage() {
           actualDate = new Date().toISOString()
         }
 
-        const { error } = await supabase
+        const { error } = await db
           .from("customer_notifications")
           .update({
             status: status,

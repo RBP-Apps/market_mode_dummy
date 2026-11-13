@@ -19,7 +19,7 @@ import {
   Plus
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Page configuration
 const CONFIG = {
@@ -93,7 +93,7 @@ export default function DCRPage() {
     }
   }, [])
 
-  // Main data fetch from Supabase table / enquiries
+  // Main data fetch from Local Storage table / enquiries
   const fetchDcrData = useCallback(async () => {
     try {
       setLoading(true)
@@ -104,7 +104,7 @@ export default function DCRPage() {
         dcrRes,
         { data: dispatchMaterialsData }
       ] = await Promise.all([
-        supabase
+        db
           .from("dcr_creation")
           .select(`
             *,
@@ -116,7 +116,7 @@ export default function DCRPage() {
               contact_number
             )
           `),
-        supabase
+        db
           .from("dispatch_materials")
           .select("enquiry_number, planned, actual")
           .then((r) => r)
@@ -127,7 +127,7 @@ export default function DCRPage() {
 
       // Fallback 1: Try 'dcr' table if dcr_creation fails
       if (res.error) {
-        res = await supabase
+        res = await db
           .from("dcr")
           .select(`
             *,
@@ -143,7 +143,7 @@ export default function DCRPage() {
 
       // Fallback 2: Try 'enquiries' table directly if standalone DCR table is not created yet
       if (res.error) {
-        res = await supabase
+        res = await db
           .from("enquiries")
           .select("*")
       }
@@ -263,8 +263,8 @@ export default function DCRPage() {
       const fileName = `dcr_${selectedRecord.enquiryNumber}_${Date.now()}.${fileExt}`
       const filePath = `dcr_certificates/${fileName}`
 
-      // Upload to Supabase Storage bucket
-      let { error: uploadError } = await supabase.storage
+      // Upload to Local Storage Storage bucket
+      let { error: uploadError } = await db.storage
         .from("module_uploads")
         .upload(filePath, file)
 
@@ -272,7 +272,7 @@ export default function DCRPage() {
 
       if (uploadError) {
         // Fallback bucket search
-        const fallbackRes = await supabase.storage
+        const fallbackRes = await db.storage
           .from("survey_file")
           .upload(filePath, file)
 
@@ -280,7 +280,7 @@ export default function DCRPage() {
         bucketName = "survey_file"
       }
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: publicUrlData } = db.storage
         .from(bucketName)
         .getPublicUrl(filePath)
 
@@ -328,14 +328,14 @@ export default function DCRPage() {
       }
 
       // Try updating 'dcr_creation'
-      let { error: updateError } = await supabase
+      let { error: updateError } = await db
         .from("dcr_creation")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord.enquiryNumber)
 
       if (updateError) {
         // Try updating 'dcr'
-        const res2 = await supabase
+        const res2 = await db
           .from("dcr")
           .update(updatePayload)
           .eq("enquiry_number", selectedRecord.enquiryNumber)
@@ -344,7 +344,7 @@ export default function DCRPage() {
 
       if (updateError) {
         // Fallback upsert
-        const res3 = await supabase
+        const res3 = await db
           .from("dcr_creation")
           .upsert({
             enquiry_number: selectedRecord.enquiryNumber,

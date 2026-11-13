@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Key, Cpu, Search, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useDeviceContext } from './DeviceContext';
-import supabase from "../../utils/supabase"
+import db from "../../services/storageService"
 
 // Environment variables
 const SOLAR_APPKEY = import.meta.env.VITE_SOLAR_APP_KEY;
@@ -82,7 +82,7 @@ const AutoLogin = ({ onTokenChange, onDeviceDataChange, onBeneficiarySelect }) =
   setError('');
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("Inverter_id")
       .select("*");
 
@@ -117,7 +117,7 @@ const AutoLogin = ({ onTokenChange, onDeviceDataChange, onBeneficiarySelect }) =
     setFilteredBeneficiaries(sortedBeneficiaries);
 
   } catch (err) {
-    console.error("Error fetching Supabase data:", err);
+    console.error("Error fetching Local Storage data:", err);
     setError(`Failed to load beneficiary data: ${err.message}`);
   } finally {
     setLoading(prev => ({ ...prev, googleSheets: false }));

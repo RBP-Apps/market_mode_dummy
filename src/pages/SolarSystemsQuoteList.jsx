@@ -24,7 +24,7 @@ import {
   DollarSign
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 export default function SolarSystemsQuoteListPage() {
   const [items, setItems] = useState([])
@@ -124,7 +124,7 @@ export default function SolarSystemsQuoteListPage() {
     try {
       setLoading(true)
       setError(null)
-      const { data, error: fetchErr } = await supabase
+      const { data, error: fetchErr } = await db
         .from("solar_systems_quote_list")
         .select("*")
         .order("id", { ascending: true })
@@ -262,7 +262,7 @@ export default function SolarSystemsQuoteListPage() {
         updated_at: new Date().toISOString()
       }
 
-      const { error: insertErr } = await supabase
+      const { error: insertErr } = await db
         .from("solar_systems_quote_list")
         .insert([payload])
 
@@ -311,7 +311,7 @@ export default function SolarSystemsQuoteListPage() {
         updated_at: new Date().toISOString()
       }
 
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await db
         .from("solar_systems_quote_list")
         .update(payload)
         .eq("id", selectedItem.id)
@@ -336,7 +336,7 @@ export default function SolarSystemsQuoteListPage() {
     setError(null)
 
     try {
-      const { error: deleteErr } = await supabase
+      const { error: deleteErr } = await db
         .from("solar_systems_quote_list")
         .delete()
         .eq("id", selectedItem.id)

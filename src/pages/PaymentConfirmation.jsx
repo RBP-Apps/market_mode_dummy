@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, CreditCard, DollarSign, Calendar, Edit3, Loader2, Download, ChevronDown, ChevronUp } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Page configuration
 const CONFIG = {
@@ -103,7 +103,7 @@ export default function PaymentConfirmationPage() {
         { data, error: fetchError },
         { data: registrationData }
       ] = await Promise.all([
-        supabase
+        db
           .from("payment_confirmations")
           .select(`
             *,
@@ -114,7 +114,7 @@ export default function PaymentConfirmationPage() {
             )
           `)
           .not("planned", "is", null),
-        supabase
+        db
           .from("registration")
           .select("enquiry_number, planned, actual")
           .then((r) => r)
@@ -267,7 +267,7 @@ export default function PaymentConfirmationPage() {
         status: "Done"
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("payment_confirmations")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord.enquiryNumber)

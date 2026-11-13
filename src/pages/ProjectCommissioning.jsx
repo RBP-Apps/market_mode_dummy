@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, Package, Calendar, Edit, Upload, UserCheck } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 const CONFIG = {
   PAGE_CONFIG: {
@@ -97,7 +97,7 @@ function ProjectCommissionPage() {
 
   const fetchDropdownOptions = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("dropdown")
         .select("stage")
 
@@ -121,7 +121,7 @@ function ProjectCommissionPage() {
 
       await fetchDropdownOptions()
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("project_commissions")
         .select(`
           *,
@@ -226,13 +226,13 @@ function ProjectCommissionPage() {
     const fileName = `${selectedRecord.enquiryNumber}_${folderName}_${Date.now()}.${fileExt}`
     const filePath = `project_commission/${fileName}`
 
-    const { error: uploadErr } = await supabase.storage
+    const { error: uploadErr } = await db.storage
       .from("IP_assignment")
       .upload(filePath, file)
 
     if (uploadErr) throw uploadErr
 
-    const { data: publicData } = supabase.storage
+    const { data: publicData } = db.storage
       .from("IP_assignment")
       .getPublicUrl(filePath)
 
@@ -265,7 +265,7 @@ function ProjectCommissionPage() {
           ? (selectedRecord.actualDate || new Date().toISOString())
           : null
 
-      const { error } = await supabase
+      const { error } = await db
         .from("project_commissions")
         .update({
           status: status,

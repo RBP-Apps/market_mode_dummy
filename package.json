@@ -15,7 +15,6 @@
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-slot": "^1.1.2",
-    "@supabase/supabase-js": "^2.101.1",
     "@tailwindcss/vite": "^4.0.9",
     "antd": "^6.4.5",
     "axios": "^1.8.1",

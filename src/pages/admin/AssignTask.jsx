@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Upload, FileImage, Calendar, Edit2, Save, X, History } from "lucide-react";
 import AdminLayout from "../../components/layout/AdminLayout";
-import supabase from "../../utils/supabase";
+import db from "../../services/storageService"
 
 export default function BeneficiaryForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,7 +77,7 @@ export default function BeneficiaryForm() {
   // Fetch dropdown options
   const fetchDropdownOptions = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("dropdown")
         .select("*");
 
@@ -139,7 +139,7 @@ export default function BeneficiaryForm() {
     try {
       setIsLoadingHistory(true);
 
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from("enquiries")
         .select("*")
         .order("id", { ascending: false });
@@ -244,7 +244,7 @@ export default function BeneficiaryForm() {
         }
       }
 
-      const { error } = await supabase
+      const { error } = await db
         .from("enquiries")
         .update({
           enquiry_number: editFormData.enquiryNumber,
@@ -341,8 +341,8 @@ export default function BeneficiaryForm() {
       const fileName = `electricity_bill_${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
+      // Upload to Local Storage Storage
+      const { data, error } = await db.storage
         .from('enquery_file')
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -352,7 +352,7 @@ export default function BeneficiaryForm() {
       if (error) throw error;
 
       // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
+      const { data: { publicUrl } } = db.storage
         .from('enquery_file')
         .getPublicUrl(filePath);
 
@@ -381,7 +381,7 @@ export default function BeneficiaryForm() {
         }
       }
 
-      const { error } = await supabase
+      const { error } = await db
         .from("enquiries")
         .insert([
           {

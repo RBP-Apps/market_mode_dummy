@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, Upload, AlertCircle, FileText, Loader2, ArrowRight } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Page configuration
 const CONFIG = {
@@ -80,7 +80,7 @@ export default function CSPDLInspectionPage() {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = await db
         .from("cspdl_inspections")
         .select(`
           *,
@@ -189,13 +189,13 @@ export default function CSPDLInspectionPage() {
       const fileName = `cspdl_inspect_${selectedRecord.enquiryNumber}_${Date.now()}.${fileExt}`
       const filePath = `module_uploads/${fileName}`
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await db.storage
         .from("module_uploads")
         .upload(filePath, file)
 
       if (uploadError) throw uploadError
 
-      const { data } = supabase.storage
+      const { data } = db.storage
         .from("module_uploads")
         .getPublicUrl(filePath)
 
@@ -243,7 +243,7 @@ export default function CSPDLInspectionPage() {
         status: "Done"
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("cspdl_inspections")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord.enquiryNumber)

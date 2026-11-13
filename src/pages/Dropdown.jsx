@@ -24,7 +24,7 @@ import {
   UserCheck
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 export default function DropdownPage() {
   // Active Tab: "dropdown" or "master2"
@@ -86,12 +86,12 @@ export default function DropdownPage() {
   const [dropdownFormData, setDropdownFormData] = useState(initialDropdownForm)
   const [master2FormData, setMaster2FormData] = useState(initialMaster2Form)
 
-  // Fetch data from Supabase table dropdown
+  // Fetch data from Local Storage table dropdown
   const fetchDropdownData = async () => {
     try {
       setLoading(true)
       setError(null)
-      const { data, error: fetchErr } = await supabase
+      const { data, error: fetchErr } = await db
         .from("dropdown")
         .select("*")
         .order("id", { ascending: false })
@@ -106,12 +106,12 @@ export default function DropdownPage() {
     }
   }
 
-  // Fetch data from Supabase table Master2
+  // Fetch data from Local Storage table Master2
   const fetchMaster2Data = async () => {
     try {
       setLoading(true)
       setError(null)
-      const { data, error: fetchErr } = await supabase
+      const { data, error: fetchErr } = await db
         .from("Master2")
         .select("*")
         .order("id", { ascending: false })
@@ -252,7 +252,7 @@ export default function DropdownPage() {
           phase: dropdownFormData.phase.trim() || null
         }
 
-        const { error: insertErr } = await supabase.from("dropdown").insert([payload])
+        const { error: insertErr } = await db.from("dropdown").insert([payload])
         if (insertErr) throw insertErr
 
         triggerSuccess("Dropdown entry created successfully!")
@@ -268,7 +268,7 @@ export default function DropdownPage() {
           branch: master2FormData.branch.trim() || null
         }
 
-        const { error: insertErr } = await supabase.from("Master2").insert([payload])
+        const { error: insertErr } = await db.from("Master2").insert([payload])
         if (insertErr) throw insertErr
 
         triggerSuccess("Dealer record created successfully!")
@@ -311,7 +311,7 @@ export default function DropdownPage() {
           phase: dropdownFormData.phase.trim() || null
         }
 
-        const { error: updateErr } = await supabase.from("dropdown").update(payload).eq("id", selectedItem.id)
+        const { error: updateErr } = await db.from("dropdown").update(payload).eq("id", selectedItem.id)
         if (updateErr) throw updateErr
 
         triggerSuccess("Dropdown entry updated successfully!")
@@ -327,7 +327,7 @@ export default function DropdownPage() {
           branch: master2FormData.branch.trim() || null
         }
 
-        const { error: updateErr } = await supabase.from("Master2").update(payload).eq("id", selectedItem.id)
+        const { error: updateErr } = await db.from("Master2").update(payload).eq("id", selectedItem.id)
         if (updateErr) throw updateErr
 
         triggerSuccess("Dealer record updated successfully!")
@@ -350,7 +350,7 @@ export default function DropdownPage() {
 
     try {
       const tableName = activeTab === "dropdown" ? "dropdown" : "Master2"
-      const { error: deleteErr } = await supabase.from(tableName).delete().eq("id", selectedItem.id)
+      const { error: deleteErr } = await db.from(tableName).delete().eq("id", selectedItem.id)
 
       if (deleteErr) throw deleteErr
 
@@ -1342,7 +1342,7 @@ export default function DropdownPage() {
               <p className="text-sm text-gray-600 leading-relaxed">
                 Are you sure you want to delete entry <strong className="text-gray-900">#{selectedItem?.id}</strong>
                 {selectedItem?.dealer ? ` (${selectedItem.dealer})` : selectedItem?.structure_type ? ` (${selectedItem.structure_type})` : ""}?
-                This operation will permanently remove the record from Supabase table{" "}
+                This operation will permanently remove the record from Local Storage table{" "}
                 <strong>{activeTab === "dropdown" ? "dropdown" : "Master2"}</strong>.
               </p>
               <div className="flex justify-end gap-3 pt-2">

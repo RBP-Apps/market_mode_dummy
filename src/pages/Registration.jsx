@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, Edit, AlertCircle, Calendar, FileText } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Page configuration
 const CONFIG = {
@@ -66,7 +66,7 @@ export default function RegistrationPage() {
         { data, error: fetchError },
         { data: docsUploadData }
       ] = await Promise.all([
-        supabase
+        db
           .from("registration")
           .select(`
             *,
@@ -79,7 +79,7 @@ export default function RegistrationPage() {
             )
           `)
           .not("planned", "is", null),
-        supabase
+        db
           .from("documents_uploads")
           .select("enquiry_number, planned, actual")
           .then((r) => r)
@@ -297,7 +297,7 @@ export default function RegistrationPage() {
         }
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("registration")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord.enquiryNumber)

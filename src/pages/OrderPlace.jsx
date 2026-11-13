@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, DollarSign, Package, Wrench } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Configuration object
 const CONFIG = {
@@ -96,7 +96,7 @@ function OrderReceivePage() {
 
 
 
-  const fetchSupabaseData = useCallback(async () => {
+  const fetchStorageData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -104,7 +104,7 @@ function OrderReceivePage() {
       // ✅ 1. Fetch both tables parallel
       const [{ data: opData, error: opError }, { data: qcData, error: qcError }] =
         await Promise.all([
-          supabase
+          db
             .from("order_placements")
             .select(`
               *,
@@ -117,7 +117,7 @@ function OrderReceivePage() {
               )
             `)
             .not("planned", "is", null),
-          supabase.from("new_quatation_create").select("enquiry_number, net_cost"),
+          db.from("new_quatation_create").select("enquiry_number, net_cost"),
         ])
 
       if (opError) throw opError
@@ -185,7 +185,7 @@ function OrderReceivePage() {
       setHistoryData(history)
       setLoading(false)
     } catch (err) {
-      console.error("Error fetching supabase data:", err)
+      console.error("Error fetching storage data:", err)
       setError("Failed to load data: " + err.message)
       setLoading(false)
     }
@@ -194,8 +194,8 @@ function OrderReceivePage() {
 
 
   useEffect(() => {
-    fetchSupabaseData()
-  }, [fetchSupabaseData])
+    fetchStorageData()
+  }, [fetchStorageData])
 
   // Optimized filtered data with debounced search
   const filteredPendingData = useMemo(() => {
@@ -232,13 +232,13 @@ function OrderReceivePage() {
       const fileExt = file.name.split(".").pop()
       const fileName = `${selectedRecord._enquiryNumber}_${Date.now()}.${fileExt}`
 
-      const { data, error } = await supabase.storage
+      const { data, error } = await db.storage
         .from("survey_file")
         .upload(`order/${fileName}`, file)
 
       if (error) throw error
 
-      const { data: publicUrlData } = supabase.storage
+      const { data: publicUrlData } = db.storage
         .from("survey_file")
         .getPublicUrl(`order/${fileName}`)
 
@@ -399,8 +399,8 @@ function OrderReceivePage() {
       const orderCopy3Url = fileUploads.orderCopy3.url
       const orderCopy4Url = fileUploads.orderCopy4.url
 
-      // ✅ SUPABASE UPDATE
-      const { error } = await supabase
+      // ✅ LOCAL STORAGE UPDATE
+      const { error } = await db
         .from("order_placements")
         .update({
           actual: actualDate,

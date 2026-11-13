@@ -27,7 +27,7 @@ const sendEmailDirect = (email, subject, body) => {
   window.open(url, "_blank");
 };
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 // Configuration object
 const CONFIG = {
 
@@ -167,7 +167,7 @@ function FollowUpPage() {
           // ✅ 1. Fetch both tables
           const [{ data: salesCallsData, error: salesError }, { data: qcData, error: qcError }] =
             await Promise.all([
-              supabase
+              db
                 .from("sales_calls")
                 .select(`
                   *,
@@ -180,7 +180,7 @@ function FollowUpPage() {
                   )
                 `)
                 .not("planned", "is", null),
-              supabase.from("new_quatation_create").select("enquiry_number, net_cost, quatation_copy"),
+              db.from("new_quatation_create").select("enquiry_number, net_cost, quatation_copy"),
             ])
 
           if (salesError) throw salesError
@@ -346,7 +346,7 @@ function FollowUpPage() {
         ? normalizeTimestamp(selectedRecord.actual)
         : formatTimestamp()
 
-      const { error } = await supabase
+      const { error } = await db
         .from("sales_calls")
         .update({
           actual: actualDate, // ✅ main column

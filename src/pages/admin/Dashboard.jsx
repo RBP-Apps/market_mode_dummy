@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import supabase from "../../utils/supabase"
+import db from "../../services/storageService"
 import {
   BarChart3,
   CheckCircle2,
@@ -103,28 +103,28 @@ export default function FMSDashboard() {
         { data: paymentsData },
         { data: paymentConfirmationsData }
       ] = await Promise.all([
-        supabase.from("enquiries").select("*"),
-        supabase.from("assign_survey").select("*"),
-        supabase.from("site_surveys").select("*"),
-        supabase.from("new_new_quatation_create").select("*"),
-        supabase.from("quatation_10kw").select("*"),
-        supabase.from("sales_calls").select("*"),
-        supabase.from("order_placements").select("*"),
-        supabase.from("ip_assignments").select("*"),
-        supabase.from("dispatch_materials").select("*"),
-        supabase.from("customer_notifications").select("*"),
-        supabase.from("material_receipts").select("*"),
-        supabase.from("installations").select("*"),
-        supabase.from("billings").select("*"),
-        supabase.from("documents_uploads").select("*"),
-        supabase.from("project_insurance").select("*"),
-        supabase.from("subsidy_disbursals").select("*"),
-        supabase.from("subsidy_redemptions").select("*"),
-        supabase.from("inspections").select("*"),
-        supabase.from("qc").select("*"),
-        supabase.from("registration").select("*"),
-        supabase.from("payments").select("*"),
-        supabase.from("payment_confirmations").select("*")
+        db.from("enquiries").select("*"),
+        db.from("assign_survey").select("*"),
+        db.from("site_surveys").select("*"),
+        db.from("new_new_quatation_create").select("*"),
+        db.from("quatation_10kw").select("*"),
+        db.from("sales_calls").select("*"),
+        db.from("order_placements").select("*"),
+        db.from("ip_assignments").select("*"),
+        db.from("dispatch_materials").select("*"),
+        db.from("customer_notifications").select("*"),
+        db.from("material_receipts").select("*"),
+        db.from("installations").select("*"),
+        db.from("billings").select("*"),
+        db.from("documents_uploads").select("*"),
+        db.from("project_insurance").select("*"),
+        db.from("subsidy_disbursals").select("*"),
+        db.from("subsidy_redemptions").select("*"),
+        db.from("inspections").select("*"),
+        db.from("qc").select("*"),
+        db.from("registration").select("*"),
+        db.from("payments").select("*"),
+        db.from("payment_confirmations").select("*")
       ]);
 
       if (enquiriesErr) throw enquiriesErr;

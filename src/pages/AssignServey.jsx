@@ -7,7 +7,7 @@ import {
   Trash2, Plus, Calendar, ShieldCheck, Info, ClipboardCopy
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 
@@ -35,7 +35,7 @@ export default function AssignSurveyPage() {
       let userPageStr = pageAccess;
       if (username) {
         try {
-          const { data } = await supabase
+          const { data } = await db
             .from("login")
             .select("page, role")
             .eq("username", username)
@@ -177,7 +177,7 @@ export default function AssignSurveyPage() {
     try {
       setLoading(true)
 
-      const { data: estData, error: estError } = await supabase
+      const { data: estData, error: estError } = await db
         .from("assign_survey")
         .select(`
           *,
@@ -189,7 +189,7 @@ export default function AssignSurveyPage() {
       setSurveys(estData || [])
 
       try {
-        const { data: actData, error: actError } = await supabase
+        const { data: actData, error: actError } = await db
           .from("assign_survey_actual")
           .select(`
             *,
@@ -346,13 +346,13 @@ export default function AssignSurveyPage() {
     const fileName = `${enquiryNum}_${folder}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
     const filePath = `survey/${fileName}`
 
-    const { error } = await supabase.storage
+    const { error } = await db.storage
       .from("survey_file")
       .upload(filePath, file)
 
     if (error) throw error
 
-    const { data } = supabase.storage
+    const { data } = db.storage
       .from("survey_file")
       .getPublicUrl(filePath)
 
@@ -804,19 +804,19 @@ export default function AssignSurveyPage() {
           survey_date: new Date().toISOString()
         }
 
-        const { data: existingActualRec } = await supabase
+        const { data: existingActualRec } = await db
           .from("assign_survey_actual")
           .select("id")
           .eq("enquiry_id", selectedSurvey.enquiry_id)
 
         if (existingActualRec && existingActualRec.length > 0) {
-          const { error: actualErr } = await supabase
+          const { error: actualErr } = await db
             .from("assign_survey_actual")
             .update(actualUpdatePayload)
             .eq("id", existingActualRec[0].id)
           if (actualErr) throw actualErr
         } else {
-          const { error: actualErr } = await supabase
+          const { error: actualErr } = await db
             .from("assign_survey_actual")
             .insert(actualUpdatePayload)
           if (actualErr) throw actualErr
@@ -854,7 +854,7 @@ export default function AssignSurveyPage() {
           survey_date: new Date().toISOString()
         }
 
-        const { error: estErr } = await supabase
+        const { error: estErr } = await db
           .from("assign_survey")
           .update(estPayload)
           .eq("id", selectedSurvey.id)
@@ -863,7 +863,7 @@ export default function AssignSurveyPage() {
 
         // 2. Fallback upsert into assign_survey_actual for Actual Survey stage (planned_2 = CURRENT_DATE, actual_2 = null)
         try {
-          const { data: existingRecords } = await supabase
+          const { data: existingRecords } = await db
             .from("assign_survey_actual")
             .select("id")
             .eq("enquiry_id", selectedSurvey.enquiry_id)
@@ -877,7 +877,7 @@ export default function AssignSurveyPage() {
           }
 
           if (!existingRecords || existingRecords.length === 0) {
-            await supabase
+            await db
               .from("assign_survey_actual")
               .insert(actualPayload)
           }
@@ -972,7 +972,7 @@ export default function AssignSurveyPage() {
         ? "assign_survey_actual"
         : "assign_survey"
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from(targetTable)
         .update(updatePayload)
         .eq("id", editRecord.id)

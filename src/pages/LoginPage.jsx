@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { User, Lock, Eye, EyeOff, Zap } from "lucide-react"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 import { getFirstAccessibleRoute } from "../utils/navigation"
 
 const LoginPage = () => {
@@ -42,8 +42,8 @@ useEffect(() => {
     try {
       setIsDataLoading(true);
 
-      // 🔥 Supabase se data fetch
-      const { data, error } = await supabase
+      // 🔥 Local Storage se data fetch
+      const { data, error } = await db
         .from("login")
         .select("username, password, role, access, page");
 
@@ -74,7 +74,7 @@ useEffect(() => {
 
       setMasterData({ userCredentials, userRoles, userPages });
 
-      console.log("Loaded users from Supabase:", userCredentials);
+      console.log("Loaded users from Local Storage:", userCredentials);
 
     } catch (error) {
       console.error("Error Fetching Users:", error);
@@ -102,8 +102,8 @@ useEffect(() => {
       const trimmedUsername = formData.username.trim().toLowerCase()
       const trimmedPassword = formData.password.trim()
 
-      // Fetch fresh user record directly from Supabase to ensure accurate page permissions
-      const { data: dbUsers, error } = await supabase
+      // Fetch fresh user record directly from Local Storage to ensure accurate page permissions
+      const { data: dbUsers, error } = await db
         .from("login")
         .select("*")
 

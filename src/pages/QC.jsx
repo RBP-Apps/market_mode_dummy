@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, Eye, Calendar, Loader2, ShieldCheck, ClipboardCheck, ArrowRight, Upload, Check, AlertCircle, FileText } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 const PHYSICAL_INSPECTION_ITEMS = [
   { id: 1, text: "Anchor fasteners should be used at the time of Structure installation" },
@@ -136,7 +136,7 @@ export default function QCPage() {
         { data: fmsData, error: fmsError },
         { data: installationsData }
       ] = await Promise.all([
-        supabase
+        db
           .from("qc")
           .select(`
             *,
@@ -147,10 +147,10 @@ export default function QCPage() {
             )
           `)
           .not("planned", "is", null),
-        supabase
+        db
           .from("fms")
           .select("enquiry_number, bp_number, cspdcl_contract_demand, present_load, installation_date, actual_9"),
-        supabase
+        db
           .from("installations")
           .select("enquiry_number, planned, actual")
           .then((r) => r)
@@ -353,13 +353,13 @@ export default function QCPage() {
       const extension = file.name.split(".").pop()
       const fileName = `qc_${selectedRecord.enquiryNumber}_doc_${docId}_${Date.now()}.${extension}`
       
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await db.storage
         .from("module_uploads")
         .upload(fileName, file)
         
       if (uploadError) throw uploadError
 
-      const { data } = supabase.storage
+      const { data } = db.storage
         .from("module_uploads")
         .getPublicUrl(fileName)
 
@@ -439,7 +439,7 @@ export default function QCPage() {
     try {
       const qcJson = JSON.stringify(form)
 
-      const { error } = await supabase
+      const { error } = await db
         .from("qc")
         .update({
           actual: new Date().toISOString(),

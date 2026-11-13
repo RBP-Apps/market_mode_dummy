@@ -6,7 +6,7 @@ import {
   Phone, Eye, Package, Truck, Upload, Edit2, Plus, FileText
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 // Updated Configuration object
 const CONFIG = {
@@ -95,7 +95,7 @@ function DispatchMaterialsPage() {
       // fetch dispatch_materials, quotation, and completed dispatch_planner (history) in parallel
       const [{ data: dmData, error: dmError }, { data: quotationData, error: quotationError }, { data: dpHistoryData, error: dpError }] =
         await Promise.all([
-          supabase
+          db
             .from("dispatch_materials")
             .select(`
               *,
@@ -108,10 +108,10 @@ function DispatchMaterialsPage() {
               )
             `)
             .not("planned", "is", null),
-          supabase
+          db
             .from("new_quatation_create")
             .select("*"),
-          supabase
+          db
             .from("dispatch_planner")
             .select("enquiry_number, actual")
             .not("actual", "is", null),
@@ -290,20 +290,20 @@ function DispatchMaterialsPage() {
     try {
       const enqNum = selectedRecord.enquiryNumber || "GEN"
 
-      // Helper file uploader to Supabase storage
+      // Helper file uploader to Local Storage storage
       const uploadFileToStorage = async (file, tag) => {
         if (!file) return ""
         const fileExt = file.name.split(".").pop()
         const fileName = `${enqNum}_${tag}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
         const filePath = `dispatch_materials/${fileName}`
 
-        const { error: uploadError } = await supabase.storage
+        const { error: uploadError } = await db.storage
           .from("survey_file")
           .upload(filePath, file)
 
         if (uploadError) throw uploadError
 
-        const { data: publicUrlData } = supabase.storage
+        const { data: publicUrlData } = db.storage
           .from("survey_file")
           .getPublicUrl(filePath)
 
@@ -347,7 +347,7 @@ function DispatchMaterialsPage() {
         actual: new Date().toISOString()
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from("dispatch_materials")
         .update(updatePayload)
         .eq("enquiry_number", selectedRecord.enquiryNumber)

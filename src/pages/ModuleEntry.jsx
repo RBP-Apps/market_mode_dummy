@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, Upload, Loader2, FileText, ListChecks, Calendar, Clock } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 import Papa from "papaparse"
 
 
@@ -94,7 +94,7 @@ function ModuleEntryPage() {
             setLoading(true)
             setError(null)
 
-            const { data, error } = await supabase
+            const { data, error } = await db
                 .from("fms")
                 .select("enquiry_number, beneficiary_name, actual_18, url")
                 .not("enquiry_number", "is", null)
@@ -157,17 +157,17 @@ function ModuleEntryPage() {
     }, [showHistory, pendingData, historyData, debouncedSearchTerm])
 
 
-    const uploadFileToSupabase = useCallback(async (file, enquiryNumber) => {
+    const uploadFileToStorage = useCallback(async (file, enquiryNumber) => {
         try {
             const fileName = `${enquiryNumber}_module_${Date.now()}.csv`
 
-            const { error } = await supabase.storage
+            const { error } = await db.storage
                 .from("module_uploads")
                 .upload(fileName, file)
 
             if (error) throw error
 
-            const { data } = supabase.storage
+            const { data } = db.storage
                 .from("module_uploads")
                 .getPublicUrl(fileName)
 
@@ -188,7 +188,7 @@ function ModuleEntryPage() {
                         const rows = results.data
 
                         // 🔥 FMS se ek baar data lao
-                        const { data: fmsData, error } = await supabase
+                        const { data: fmsData, error } = await db
                             .from("fms")
                             .select("bp_number, beneficiary_name")
                             .eq("enquiry_number", enquiryNumber)
@@ -214,7 +214,7 @@ function ModuleEntryPage() {
 
                         if (insertData.length === 0) return resolve()
 
-                        const { error: insertError } = await supabase
+                        const { error: insertError } = await db
                             .from("module_entry")
                             .insert(insertData)
 
@@ -256,18 +256,18 @@ function ModuleEntryPage() {
         setIsSubmitting(true)
 
         try {
-            // const fileUrl = await uploadFileToSupabase(csvFile, selectedRecord.enquiryNumber)
+            // const fileUrl = await uploadFileToStorage(csvFile, selectedRecord.enquiryNumber)
             const enquiryNumber = selectedRecord.enquiryNumber
 
             // 1️⃣ CSV data ko DB me insert karo
             await insertModuleData(csvFile, enquiryNumber)
 
             // 2️⃣ file upload karo (same as before)
-            const fileUrl = await uploadFileToSupabase(csvFile, enquiryNumber)
+            const fileUrl = await uploadFileToStorage(csvFile, enquiryNumber)
 
             const actualDate = new Date().toISOString()
 
-            const { error } = await supabase
+            const { error } = await db
                 .from("fms")
                 .update({
                     actual_18: actualDate,

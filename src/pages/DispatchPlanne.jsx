@@ -8,7 +8,7 @@ import {
   Package, Truck, Users, MessageSquare
 } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
-import supabase from "../utils/supabase"
+import db from "../services/storageService"
 
 export default function DispatchPlannerPage() {
   const [activeTab, setActiveTab] = useState("pending") // pending / history
@@ -39,7 +39,7 @@ export default function DispatchPlannerPage() {
     setLoading(true)
     try {
       const [{ data, error }, { data: salesCallsData, error: salesError }] = await Promise.all([
-        supabase
+        db
           .from("dispatch_planner")
           .select(`
             *,
@@ -52,7 +52,7 @@ export default function DispatchPlannerPage() {
             )
           `)
           .order("id", { ascending: false }),
-        supabase
+        db
           .from("payment_confirmations")
           .select("enquiry_number, planned, actual")
           .not("planned", "is", null)
@@ -120,13 +120,13 @@ export default function DispatchPlannerPage() {
     const fileName = `${enquiryNum}_challan_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
     const filePath = `dispatch_planner/${fileName}`
 
-    const { error } = await supabase.storage
+    const { error } = await db.storage
       .from("survey_file")
       .upload(filePath, file)
 
     if (error) throw error
 
-    const { data } = supabase.storage
+    const { data } = db.storage
       .from("survey_file")
       .getPublicUrl(filePath)
 
@@ -167,7 +167,7 @@ export default function DispatchPlannerPage() {
         actual: new Date().toISOString()
       }
 
-      const { error } = await supabase
+      const { error } = await db
         .from("dispatch_planner")
         .update(updatePayload)
         .eq("id", selectedRecord.id)

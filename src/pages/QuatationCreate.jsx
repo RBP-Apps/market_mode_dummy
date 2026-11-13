@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import emailjs from "@emailjs/browser";
 import QuotationPreview from "../components/layout/QuotationPreview";
-import supabase from "../utils/supabase";
+import db from "../services/storageService"
 import AdminLayout from "../components/layout/AdminLayout";
 import QuotationListView from "../components/QuotationCreate/QuotationListView";
 import QuotationFormView from "../components/QuotationCreate/QuotationFormView";
@@ -267,7 +267,7 @@ export default function QuatationCreate() {
       let userPageStr = pageAccess;
       if (username) {
         try {
-          const { data } = await supabase
+          const { data } = await db
             .from("login")
             .select("page, role")
             .eq("username", username)
@@ -699,13 +699,13 @@ export default function QuatationCreate() {
       let quotationMap = {};
 
       // 1. Fetch from new_quatation_create
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('new_quatation_create')
         .select('enquiry_number, planned, actual, quatation_copy, status, bill_of_material, salesperson, customer, quotation_date, product');
 
       if (error) {
         console.warn("quotation copy query failed, falling back without new columns:", error);
-        const { data: fbData, error: fbError } = await supabase
+        const { data: fbData, error: fbError } = await db
           .from('new_quatation_create')
           .select('enquiry_number, planned, actual, quatation_copy');
 
@@ -745,7 +745,7 @@ export default function QuatationCreate() {
       }
 
       // 2. Fetch from quatation_10kw
-      const { data: q10Data, error: q10Error } = await supabase
+      const { data: q10Data, error: q10Error } = await db
         .from('quatation_10kw')
         .select('enquiry_number, created_at, dated, quatation_copy, status, prepared_for, proposal_for');
 
@@ -786,12 +786,12 @@ export default function QuatationCreate() {
     setLoading(true);
 
     try {
-      const { data: q10Data } = await supabase
+      const { data: q10Data } = await db
         .from('quatation_10kw')
         .select('enquiry_number');
       const q10Set = new Set((q10Data || []).map(r => r.enquiry_number).filter(Boolean));
 
-      const { data: rows, error: fmsError } = await supabase
+      const { data: rows, error: fmsError } = await db
         .from("new_quatation_create")
         .select(`
           *,
@@ -898,12 +898,12 @@ export default function QuatationCreate() {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const filePath = `${Date.now()}_${fileName}`;
-        const { data, error } = await supabase.storage
+        const { data, error } = await db.storage
           .from("Quotation_file")
           .upload(filePath, pdfBlob, { contentType: "application/pdf", upsert: true });
 
         if (error) throw error;
-        const { data: urlData } = supabase.storage.from("Quotation_file").getPublicUrl(filePath);
+        const { data: urlData } = db.storage.from("Quotation_file").getPublicUrl(filePath);
         if (urlData?.publicUrl) return urlData.publicUrl;
       } catch (error) {
         console.error(`Error uploading PDF (Attempt ${attempt}/${retries}):`, error);
@@ -916,12 +916,12 @@ export default function QuatationCreate() {
 
   const saveToTable = async (tableName, rowData, enquiryNumber) => {
     if (!enquiryNumber) {
-      const { error } = await supabase.from(tableName).insert(rowData);
+      const { error } = await db.from(tableName).insert(rowData);
       if (error) throw error;
       return;
     }
 
-    const { data: existing, error: checkError } = await supabase
+    const { data: existing, error: checkError } = await db
       .from(tableName)
       .select('id, quatation_copy')
       .eq('enquiry_number', enquiryNumber)
@@ -936,20 +936,20 @@ export default function QuatationCreate() {
       if (!updatePayload.quatation_copy && existing[0].quatation_copy) {
         updatePayload.quatation_copy = existing[0].quatation_copy;
       }
-      const { error } = await supabase
+      const { error } = await db
         .from(tableName)
         .update(updatePayload)
         .eq('id', existing[0].id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from(tableName).insert(rowData);
+      const { error } = await db.from(tableName).insert(rowData);
       if (error) throw error;
     }
   };
 
   const updateSendStatus = async (enquiryNumber, sendType) => {
     try {
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = await db
         .from('new_quatation_create')
         .select('id, send_status')
         .eq('enquiry_number', enquiryNumber)
@@ -965,7 +965,7 @@ export default function QuatationCreate() {
       else if (sendType === 'email')
         newStatus = currentStatus ? `${currentStatus}, Email` : 'Email';
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await db
         .from('new_quatation_create')
         .update({
           send_status: newStatus,
@@ -984,7 +984,7 @@ export default function QuatationCreate() {
 
   const sendWhatsApp = async (quotationData) => {
     try {
-      const { data, error } = await supabase.functions.invoke('whatsapp-quotation', {
+      const { data, error } = await db.functions.invoke('whatsapp-quotation', {
         body: {
           phone: quotationData.contactNumber,
           customerName: quotationData.beneficiaryName,
@@ -1386,7 +1386,7 @@ export default function QuatationCreate() {
 
   const fetchProductData = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('solar_systems_quote_list')
         .select('*')
         .order('id', { ascending: true });
@@ -1457,7 +1457,7 @@ export default function QuatationCreate() {
 
   const fetchDropdownData = async () => {
     try {
-      const { data, error } = await supabase.from('dropdown').select('*');
+      const { data, error } = await db.from('dropdown').select('*');
       if (error) throw error;
 
       if (data && data.length > 0) {
@@ -1490,7 +1490,7 @@ export default function QuatationCreate() {
 
   const fetchFMSDataForForm = async () => {
     try {
-      const { data, error } = await supabase.from('fms').select('*');
+      const { data, error } = await db.from('fms').select('*');
       if (error) throw error;
       const customers = [];
       const cMap = {};
@@ -1535,7 +1535,7 @@ export default function QuatationCreate() {
 
   const fetchDealerData = async () => {
     try {
-      const { data, error } = await supabase.from('Master2').select('*');
+      const { data, error } = await db.from('Master2').select('*');
       if (error) throw error;
       const dealers = [];
       const dMap = {};
@@ -1954,8 +1954,8 @@ export default function QuatationCreate() {
       if (!confirmApproval) return;
 
       const [res1, res2] = await Promise.all([
-        supabase.from('new_quatation_create').update({ status: 'Approved' }).eq('enquiry_number', enquiryNumber),
-        supabase.from('quatation_10kw').update({ status: 'Approved' }).eq('enquiry_number', enquiryNumber)
+        db.from('new_quatation_create').update({ status: 'Approved' }).eq('enquiry_number', enquiryNumber),
+        db.from('quatation_10kw').update({ status: 'Approved' }).eq('enquiry_number', enquiryNumber)
       ]);
 
       if (res1.error) throw res1.error;
@@ -1979,7 +1979,7 @@ export default function QuatationCreate() {
 
       let updateError = null;
 
-      const res1 = await supabase
+      const res1 = await db
         .from('new_quatation_create')
         .update(updatePayload)
         .eq('enquiry_number', enquiryNumber);
@@ -1988,7 +1988,7 @@ export default function QuatationCreate() {
         updateError = res1.error;
       }
 
-      await supabase
+      await db
         .from('quatation_10kw')
         .update(updatePayload)
         .eq('enquiry_number', enquiryNumber);
