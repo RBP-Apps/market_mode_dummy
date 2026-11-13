@@ -22,10 +22,11 @@ ChartJS.register(
   Legend
 );
 
+import mockApiService from "../services/mockApiService";
+
 // Configuration
 const CONFIG = {
-  APPS_SCRIPT_URL:
-    "https://script.google.com/macros/s/AKfycbzF4JjwpmtgsurRYkORyZvQPvRGc06VuBMCJM00wFbOOtVsSyFiUJx5xtb1J0P5ooyf/exec",
+  APPS_SCRIPT_URL: "local://api/sheets",
   ENERGY_ANALYSIS_SHEET_NAME: "Energy analysis",
 };
 
@@ -75,7 +76,7 @@ const AnalysisGraph = () => {
     }
   }, []);
 
-  // Fetch data from Google Sheets
+  // Fetch data (simulated local mode)
   const fetchEnergyData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -84,29 +85,7 @@ const AnalysisGraph = () => {
       const url = `${CONFIG.APPS_SCRIPT_URL}?sheet=${encodeURIComponent(
         CONFIG.ENERGY_ANALYSIS_SHEET_NAME
       )}&action=fetch`;
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(
-          `HTTP Error: ${response.status} - ${response.statusText}`
-        );
-      }
-
-      const text = await response.text();
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch (parseError) {
-        const jsonStart = text.indexOf("{");
-        const jsonEnd = text.lastIndexOf("}");
-        if (jsonStart !== -1 && jsonEnd !== -1) {
-          const jsonString = text.substring(jsonStart, jsonEnd + 1);
-          data = JSON.parse(jsonString);
-        } else {
-          throw new Error("Invalid JSON response from server");
-        }
-      }
+      const data = mockApiService.handleGoogleSheetsRequest(url);
 
       const energyRecords = [];
       const uniqueBeneficiaries = new Set();

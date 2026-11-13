@@ -18,13 +18,9 @@ import {
   Save, Upload, Server, FileText, Bell
 } from 'lucide-react';
 
-// Environment variables - with fallbacks for development
-const SOLAR_APPKEY = import.meta.env.VITE_SOLAR_APP_KEY || '';
-const SOLAR_SECRET_KEY = import.meta.env.VITE_SOLAR_SECRET_KEY || '';
-const SOLAR_SYS_CODE = import.meta.env.VITE_SOLAR_SYS_CODE || '207';
-const USER_ACCOUNT = import.meta.env.VITE_USER_ACCOUNT || '';
-const USER_PASSWORD = import.meta.env.VITE_USER_PASSWORD || '';
-const GOOGLE_SCRIPT_URL = (import.meta.env.VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbzF4JjwpmtgsurRYkORyZvQPvRGc06VuBMCJM00wFbOOtVsSyFiUJx5xtb1J0P5ooyf/exec").trim();
+import mockSolarService from '../../services/mockSolarService';
+import mockWhatsAppService from '../../services/mockWhatsAppService';
+
 const SHEET_NAME = "Inverter_id";
 
 // Cache utility functions - Moved outside component
@@ -209,73 +205,23 @@ const MonthlyPerformanceReport = () => {
     setError('');
 
     try {
-      const url = `${GOOGLE_SCRIPT_URL}?sheet=${encodeURIComponent(SHEET_NAME)}&action=fetch`;
+      const { data: invRows, error: invError } = await db.from("Inverter_id").select("*");
+      if (invError) throw invError;
 
+      const inverterList = (invRows || []).map((row, index) => {
+        const inverterId = String(row.inverter_id || '').trim();
+        const beneficiaryName = String(row.beneficiary_name || '').trim();
+        const capacity = parseFloat(row.inverter_capacity) || 1;
 
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch inverter list: ${response.status}`);
-      }
-
-      const text = await response.text();
-      let jsonData;
-
-      try {
-        jsonData = JSON.parse(text);
-      } catch (parseError) {
-
-        // Try to extract JSON from response
-        const start = text.indexOf('{');
-        const end = text.lastIndexOf('}');
-        if (start !== -1 && end !== -1) {
-          jsonData = JSON.parse(text.substring(start, end + 1));
-        } else {
-          throw new Error('Invalid JSON response from Google Sheets');
-        }
-      }
-
-      let rows = [];
-
-      // Handle different data formats
-      if (jsonData.table?.rows) {
-        rows = jsonData.table.rows;
-      } else if (Array.isArray(jsonData)) {
-        rows = jsonData;
-      } else if (jsonData.values) {
-        rows = jsonData.values.map(row => ({ c: row.map(val => ({ v: val })) }));
-      } else if (jsonData.success === false) {
-        throw new Error(jsonData.error || 'Failed to fetch sheet data');
-      }
-
-      const inverterList = [];
-      rows.forEach((row, index) => {
-        if (index === 0) return; // Skip header
-
-        let rowValues = [];
-        if (row.c) {
-          rowValues = row.c.map(cell => cell?.v || '');
-        } else if (Array.isArray(row)) {
-          rowValues = row;
-        }
-
-        const serialNo = String(rowValues[0] || '').trim();
-        const inverterId = String(rowValues[1] || '').trim();
-        const beneficiaryName = String(rowValues[2] || '').trim();
-        const capacityStr = String(rowValues[3] || '').trim();
-        const capacity = parseFloat(capacityStr) || 1;
-
-        if (inverterId && beneficiaryName) {
-          inverterList.push({
-            id: index,
-            serialNo: serialNo || `S${index}`,
-            inverterId,
-            beneficiaryName,
-            capacity,
-            selected: true
-          });
-        }
-      });
+        return {
+          id: row.id || index + 1,
+          serialNo: String(row.serial_number || `S${index + 1}`),
+          inverterId,
+          beneficiaryName,
+          capacity,
+          selected: true
+        };
+      }).filter(inv => inv.inverterId && inv.beneficiaryName);
 
       if (inverterList.length === 0) {
         showToast('No inverters found in the sheet. Please check the Inverter_id sheet.', 'warning');
@@ -334,49 +280,7 @@ const MonthlyPerformanceReport = () => {
     setLoginError('');
 
     try {
-      // Validate environment variables
-      const missingVars = [];
-      if (!SOLAR_APPKEY) missingVars.push('VITE_SOLAR_APP_KEY');
-      if (!SOLAR_SECRET_KEY) missingVars.push('VITE_SOLAR_SECRET_KEY');
-      if (!USER_ACCOUNT) missingVars.push('VITE_USER_ACCOUNT');
-      if (!USER_PASSWORD) missingVars.push('VITE_USER_PASSWORD');
-
-      if (missingVars.length > 0) {
-        throw new Error(`Missing API credentials: ${missingVars.join(', ')}. Please check environment configuration.`);
-      }
-
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
-        user_account: USER_ACCOUNT,
-        user_password: USER_PASSWORD
-      };
-
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      const responseText = await response.text();
-      let result;
-
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-
-        throw new Error(`Invalid server response. Please try again.`);
-      }
-
-      if (!response.ok) {
-        const errorMsg = result.result_msg || `Server error (${response.status})`;
-
-        throw new Error(errorMsg);
-      }
+      const result = await mockSolarService.login();
 
       if (result.result_code === "1") {
         const newToken = result.result_data?.token || '';
@@ -394,15 +298,7 @@ const MonthlyPerformanceReport = () => {
         localStorage.setItem(CACHE_KEYS.TOKEN_TIMESTAMP, Date.now().toString());
 
         showToast('✓ Login successful! Fetching data...', 'success');
-
-        // fetchInverterList is triggered by the useEffect watching localToken/token
       } else {
-        // Retry on busy server
-        if (result.result_msg?.toLowerCase().includes('busy') && retryCount < 2) {
-          showToast('Server busy, retrying...', 'info');
-          setTimeout(() => handleAutoLogin(retryCount + 1), 2000);
-          return;
-        }
         throw new Error(result.result_msg || 'Login failed with unknown error');
       }
     } catch (err) {
@@ -544,35 +440,11 @@ const MonthlyPerformanceReport = () => {
 
               let psKey = psKeyCache[inverterId];
 
-              // Fetch PS key if not cached
+              // Fetch PS key if not cached (simulated local mode)
               if (!psKey) {
-                const deviceRes = await fetch('https://gateway.isolarcloud.com.hk/openapi/getPVInverterRealTimeData', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'x-access-key': SOLAR_SECRET_KEY,
-                    'sys_code': SOLAR_SYS_CODE,
-                    'token': activeToken
-                  },
-                  body: JSON.stringify({
-                    appkey: SOLAR_APPKEY,
-                    sn_list: [inverterId],
-                    lang: '_en_US',
-                    sys_code: 207
-                  })
+                const deviceData = await mockSolarService.getPVInverterRealTimeData({
+                  sn_list: [inverterId]
                 });
-
-                if (!deviceRes.ok) {
-                  if (deviceRes.status === 401 || deviceRes.status === 403) {
-                    // Token expired - this shouldn't trigger retry on same token
-                    clearToken();
-                    clearCachedData(CACHE_KEYS.TOKEN);
-                    throw new Error('Session expired. Please login again.');
-                  }
-                  throw new Error(`Failed to fetch device data: ${deviceRes.status}`);
-                }
-
-                const deviceData = await deviceRes.json();
 
                 if (deviceData.result_code === "1" && deviceData.result_data?.device_point_list) {
                   const point = deviceData.result_data.device_point_list.find(p => p?.device_point?.ps_key);
@@ -587,41 +459,14 @@ const MonthlyPerformanceReport = () => {
                 }
               }
 
-
-
-              // Fetch energy data using PS key
-              const energyRes = await fetch('https://gateway.isolarcloud.com.hk/openapi/getDevicePointsDayMonthYearDataList', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'x-access-key': SOLAR_SECRET_KEY,
-                  'sys_code': SOLAR_SYS_CODE,
-                  'token': activeToken
-                },
-                body: JSON.stringify({
-                  appkey: SOLAR_APPKEY,
-                  data_point: 'p2', // p2 is cumulative energy
-                  data_type: '2',
-                  end_time: apiEndDate,
-                  lang: '_en_US',
-                  order: '0',
-                  ps_key_list: [psKey],
-                  query_type: '1',
-                  start_time: apiStartDate, // This should be 1 day before user's start date
-                  sys_code: 207
-                })
+              // Fetch energy data using PS key (simulated local mode)
+              const energyData = await mockSolarService.getDevicePointsDayMonthYearDataList({
+                ps_key_list: [psKey],
+                data_point: 'p2',
+                query_type: '1',
+                start_date: apiStartDate,
+                end_date: apiEndDate
               });
-
-              if (!energyRes.ok) {
-                if (energyRes.status === 401 || energyRes.status === 403) {
-                  clearToken();
-                  clearCachedData(CACHE_KEYS.TOKEN);
-                  throw new Error('Session expired. Please login again.');
-                }
-                throw new Error(`Failed to fetch energy data: ${energyRes.status}`);
-              }
-
-              const energyData = await energyRes.json();
               console.log("RAW ENERGY API RESPONSE:", energyData);
               let totalKwh = 0;
               const dailyData = [];
@@ -1128,25 +973,11 @@ const MonthlyPerformanceReport = () => {
         message: `Dear ${item.beneficiaryName},\n\nYour solar plant generation for ${formatDateToDDMMYYYY(dateRange.startDate)} to ${formatDateToDDMMYYYY(dateRange.endDate)} is below expected levels.\n\nAverage generation: ${item.specYield.toFixed(3)} kWh/kW\nTotal Energy: ${item.totalKwh.toFixed(2)} kWh\n\nOur team will provide a free cleaning service to improve performance.\nPlease watch the cleaning guide video below:\n[Video Link]`
       }));
 
-      // Send to Google Apps Script for logging
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'sendWhatsAppAlerts',
-          data: JSON.stringify(alertData),
-          month: month,
-          dateRangeStart: formatDateToDDMMYYYY(dateRange.startDate),
-          dateRangeEnd: formatDateToDDMMYYYY(dateRange.endDate)
-        }).toString()
-      });
-
-      const result = await response.json();
+      // Save alerts to local mock WhatsApp storage
+      const result = await mockWhatsAppService.sendLowGenerationAlerts(alertData);
 
       if (result.success) {
-        showToast(`✓ WhatsApp alerts logged for ${lowPerformingInverters.length} beneficiaries`, "success");
+        showToast(`✓ WhatsApp alerts logged for ${lowPerformingInverters.length} beneficiaries (Demo Mode)`, "success");
 
         // Show which inverters need attention
         console.log('Low performing inverters:', lowPerformingInverters.map(i => ({

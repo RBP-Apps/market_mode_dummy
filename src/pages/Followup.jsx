@@ -3,31 +3,30 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, FileText, MapPin, Users, Phone, Eye, DollarSign, Wrench, MessageCircle, Mail, Send } from "lucide-react"
 
-// Helper for direct WhatsApp link
+import AdminLayout from "../components/layout/AdminLayout"
+import db from "../services/storageService"
+import mockWhatsAppService from "../services/mockWhatsAppService"
+import mockEmailService from "../services/mockEmailService"
+
+// Helper for simulated WhatsApp dispatch (Local demo mode)
 const sendWhatsAppDirect = (phone, text) => {
   if (!phone) {
     alert("Kripya valid WhatsApp number dalein.");
     return;
   }
-  let cleanPhone = phone.toString().replace(/\D/g, "");
-  if (cleanPhone.length === 10) {
-    cleanPhone = "91" + cleanPhone;
-  }
-  const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
-  window.open(url, "_blank");
+  mockWhatsAppService.sendWhatsAppDirect(phone, text);
+  alert("Demo WhatsApp message sent and recorded to LocalStorage!");
 };
 
-// Helper for direct Email mailto link
+// Helper for simulated Email dispatch (Local demo mode)
 const sendEmailDirect = (email, subject, body) => {
   if (!email) {
     alert("Kripya Email address dalein.");
     return;
   }
-  const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(url, "_blank");
+  mockEmailService.sendEmailDirect(email, subject, body);
+  alert("Demo Email sent and recorded to LocalStorage!");
 };
-import AdminLayout from "../components/layout/AdminLayout"
-import db from "../services/storageService"
 // Configuration object
 const CONFIG = {
 

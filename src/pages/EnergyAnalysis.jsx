@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { CheckCircle2, X, Search, History, MapPin, Users, Phone, Eye, CreditCard, Plus, Calendar, Zap } from "lucide-react"
 import AdminLayout from "../components/layout/AdminLayout"
+import mockApiService from "../services/mockApiService"
 
 // Configuration object
 const CONFIG = {
-    // Updated Google Apps Script URL
-    APPS_SCRIPT_URL:
-        "https://script.google.com/macros/s/AKfycbzF4JjwpmtgsurRYkORyZvQPvRGc06VuBMCJM00wFbOOtVsSyFiUJx5xtb1J0P5ooyf/exec",
-    // Updated Google Drive folder ID for file uploads
-    DRIVE_FOLDER_ID: "1Kp9eEqtQfesdie6l7XEuTZne6Md8_P8qzKfGFcHhpL4",
+    // Local simulated sheet service
+    APPS_SCRIPT_URL: "local://api/sheets",
+    // Local folder ID
+    DRIVE_FOLDER_ID: "local_drive_folder",
     // Sheet names
     SOURCE_SHEET_NAME: "FMS",
     DROPDOWN_SHEET_NAME: "Drop-Down Value",
@@ -282,15 +282,7 @@ function EnergyAnalysis() {
                 rowData: JSON.stringify(rowData),
             }
 
-            const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: new URLSearchParams(updateData).toString(),
-            })
-
-            const result = await response.json()
+            const result = mockApiService.handleGoogleSheetsRequest(CONFIG.APPS_SCRIPT_URL, { body: updateData });
 
             if (!result.success) {
                 throw new Error(result.error || "Failed to submit energy analysis")
@@ -312,30 +304,10 @@ function EnergyAnalysis() {
     }
 
 
-    // Fetch dropdown options
+    // Fetch dropdown options (simulated local mode)
     const fetchDropdownOptions = useCallback(async () => {
         try {
-            const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.DROPDOWN_SHEET_NAME}&action=fetch`)
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch dropdown data: ${response.status}`)
-            }
-
-            const text = await response.text()
-            let data
-
-            try {
-                data = JSON.parse(text)
-            } catch (parseError) {
-                const jsonStart = text.indexOf("{")
-                const jsonEnd = text.lastIndexOf("}")
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    const jsonString = text.substring(jsonStart, jsonEnd + 1)
-                    data = JSON.parse(jsonString)
-                } else {
-                    throw new Error("Invalid JSON response from server")
-                }
-            }
+            const data = mockApiService.handleGoogleSheetsRequest(`${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.DROPDOWN_SHEET_NAME}&action=fetch`);
 
             let rows = []
             if (data.table && data.table.rows) {
@@ -372,32 +344,12 @@ function EnergyAnalysis() {
         }
     }, [isEmpty])
 
-    // Add this function to fetch energy analysis data
+    // Add this function to fetch energy analysis data (simulated local mode)
     const fetchEnergyAnalysisData = useCallback(async () => {
         try {
-            const response = await fetch(
+            const data = mockApiService.handleGoogleSheetsRequest(
                 `${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.ENERGY_ANALYSIS_SHEET_NAME}&action=fetch`
             );
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch energy analysis data: ${response.status}`);
-            }
-
-            const text = await response.text();
-            let data;
-
-            try {
-                data = JSON.parse(text);
-            } catch (parseError) {
-                const jsonStart = text.indexOf("{");
-                const jsonEnd = text.lastIndexOf("}");
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    const jsonString = text.substring(jsonStart, jsonEnd + 1);
-                    data = JSON.parse(jsonString);
-                } else {
-                    throw new Error("Invalid JSON response from server");
-                }
-            }
 
             const energyAnalysisRecords = [];
             let rows = [];
@@ -443,7 +395,7 @@ function EnergyAnalysis() {
             throw error;
         }
     }, []);
-    // Optimized data fetching
+    // Optimized data fetching (simulated local mode)
     const fetchSheetData = useCallback(async () => {
         try {
             setLoading(true)
@@ -452,27 +404,7 @@ function EnergyAnalysis() {
             // Fetch both main data and dropdown options
             await fetchDropdownOptions()
 
-            const response = await fetch(`${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SOURCE_SHEET_NAME}&action=fetch`)
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch data: ${response.status}`)
-            }
-
-            const text = await response.text()
-            let data
-
-            try {
-                data = JSON.parse(text)
-            } catch (parseError) {
-                const jsonStart = text.indexOf("{")
-                const jsonEnd = text.lastIndexOf("}")
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    const jsonString = text.substring(jsonStart, jsonEnd + 1)
-                    data = JSON.parse(jsonString)
-                } else {
-                    throw new Error("Invalid JSON response from server")
-                }
-            }
+            const data = mockApiService.handleGoogleSheetsRequest(`${CONFIG.APPS_SCRIPT_URL}?sheet=${CONFIG.SOURCE_SHEET_NAME}&action=fetch`);
 
             const pending = []
             let rows = []
@@ -792,7 +724,7 @@ function EnergyAnalysis() {
                     rowData[136] = details.deduction || "" // EG - Deduction
                 }
 
-                // Prepare update data for this specific record
+                // Prepare update data for this specific record (simulated local mode)
                 const updateData = {
                     action: "update",
                     sheetName: CONFIG.SOURCE_SHEET_NAME,
@@ -800,15 +732,7 @@ function EnergyAnalysis() {
                     rowData: JSON.stringify(rowData),
                 }
 
-                const response = await fetch(CONFIG.APPS_SCRIPT_URL, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/x-www-form-urlencoded",
-                    },
-                    body: new URLSearchParams(updateData).toString(),
-                })
-
-                return response.json()
+                return mockApiService.handleGoogleSheetsRequest(CONFIG.APPS_SCRIPT_URL, { body: updateData });
             })
 
             const results = await Promise.all(updatePromises)

@@ -33,11 +33,7 @@ import { useDeviceContext } from './DeviceContext';
 import AutoLogin from './AutoLogin';
 import ConfigurationPanel from './ConfigurationPanel';
 import ChartSettingsPanel from './ChartSettingsPanel';
-
-// Direct API environment variables
-const SOLAR_APPKEY = import.meta.env.VITE_SOLAR_APP_KEY;
-const SOLAR_SECRET_KEY = import.meta.env.VITE_SOLAR_SECRET_KEY;
-const SOLAR_SYS_CODE = import.meta.env.VITE_SOLAR_SYS_CODE || '207';
+import mockSolarService from '../../services/mockSolarService';
 
 const CombinedAreaChart = () => {
   // Context
@@ -576,38 +572,16 @@ const CombinedAreaChart = () => {
     setError('');
 
     try {
-      // Calculate timestamps directly from dateTime state
       const startTimestamp = convertToTimestamp(dateTime.startDate, dateTime.startTime);
       const endTimestamp = convertToTimestamp(dateTime.endDate, dateTime.endTime);
 
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
-        end_time_stamp: endTimestamp,
-        is_get_data_acquisition_time: minuteForm.is_get_data_acquisition_time,
-        lang: minuteForm.lang,
-        minute_interval: Number(minuteForm.minute_interval),
-        points: minuteForm.points,
+      const result = await mockSolarService.getDevicePointMinuteDataList({
         ps_key_list: psKey.split(',').map(s => s.trim()),
         start_time_stamp: startTimestamp,
-        sys_code: 207
-      };
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/getDevicePointMinuteDataList', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE,
-          'token': token
-        },
-        body: JSON.stringify(requestBody)
+        end_time_stamp: endTimestamp,
+        minute_interval: Number(minuteForm.minute_interval),
+        points: minuteForm.points
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
 
       if (result.result_code === "1") {
         setMinuteData(result);
@@ -624,25 +598,10 @@ const CombinedAreaChart = () => {
     }
   }, [token, minuteForm, dateTime, psKey, convertToTimestamp]);
 
-  // Fetch daily data DIRECTLY to Solar API WITH API START DATE LOGIC
+  // Fetch daily data (simulated local mode)
   const fetchDailyData = useCallback(async () => {
-    if (!token) {
-      setError('No login token available. Please login first.');
-      return;
-    }
-
     if (!dailyForm.start_date || !dailyForm.end_date) {
       setError('Please set valid start and end dates');
-      return;
-    }
-
-    // Check if date range exceeds 100 days (API limitation)
-    const start = new Date(dailyDateRange.startDate);
-    const end = new Date(dailyDateRange.endDate);
-    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysDiff > 100) {
-      setError('Daily data queries are limited to 100 days maximum');
       return;
     }
 
@@ -650,44 +609,13 @@ const CombinedAreaChart = () => {
     setError('');
 
     try {
-      // Calculate API start date (one day before user's start date)
-      const start = new Date(dailyDateRange.startDate);
-      const end = new Date(dailyDateRange.endDate);
-      const apiStart = new Date(start);
-      apiStart.setDate(apiStart.getDate() - 1);
-
-      const apiStartDateVal = formatDateForAPI(apiStart);
-      const apiEndDateVal = formatDateForAPI(end);
-
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
+      const result = await mockSolarService.getDevicePointsDayMonthYearDataList({
+        ps_key: psKey || dailyForm.ps_key,
         data_point: dailyForm.data_point,
-        data_type: dailyForm.data_type,
-        end_time: apiEndDateVal,
-        lang: '_en_US',
-        order: dailyForm.order,
-        ps_key_list: [psKey || dailyForm.ps_key],
-        query_type: dailyForm.query_type,
-        start_time: apiStartDateVal,
-        sys_code: 207
-      };
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/getDevicePointsDayMonthYearDataList', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE,
-          'token': token
-        },
-        body: JSON.stringify(requestBody)
+        query_type: dailyForm.query_type || '1',
+        start_date: dailyDateRange.startDate,
+        end_date: dailyDateRange.endDate
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
 
       if (result.result_code === "1") {
         setDailyData(result);
@@ -702,57 +630,21 @@ const CombinedAreaChart = () => {
     } finally {
       setLoading(prev => ({ ...prev, daily: false }));
     }
-  }, [token, dailyForm, dailyDateRange, psKey, formatDateForAPI]);
+  }, [dailyForm, dailyDateRange, psKey]);
 
-  // Fetch monthly-daily data (daily data over 30 days)
+  // Fetch monthly-daily data (simulated local mode)
   const fetchMonthlyDailyData = useCallback(async () => {
-    if (!token) {
-      setError('No login token available. Please login first.');
-      return;
-    }
-
     setLoading(prev => ({ ...prev, monthly_daily: true }));
     setError('');
 
     try {
-      // Calculate API start date (one day before user's start date)
-      const start = new Date(monthlyDailyDateRange.startDate);
-      const end = new Date(monthlyDailyDateRange.endDate);
-      const apiStart = new Date(start);
-      apiStart.setDate(apiStart.getDate() - 1);
-
-      const apiStartDateVal = formatDateForAPI(apiStart);
-      const apiEndDateVal = formatDateForAPI(end);
-
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
+      const result = await mockSolarService.getDevicePointsDayMonthYearDataList({
+        ps_key: psKey || monthlyDailyForm.ps_key,
         data_point: monthlyDailyForm.data_point,
-        data_type: monthlyDailyForm.data_type,
-        end_time: apiEndDateVal,
-        lang: '_en_US',
-        order: monthlyDailyForm.order,
-        ps_key_list: [psKey || monthlyDailyForm.ps_key],
-        query_type: monthlyDailyForm.query_type,
-        start_time: apiStartDateVal,
-        sys_code: 207
-      };
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/getDevicePointsDayMonthYearDataList', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE,
-          'token': token
-        },
-        body: JSON.stringify(requestBody)
+        query_type: monthlyDailyForm.query_type || '1',
+        start_date: monthlyDailyDateRange.startDate,
+        end_date: monthlyDailyDateRange.endDate
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
 
       if (result.result_code === "1") {
         setMonthlyDailyData(result);
@@ -767,56 +659,21 @@ const CombinedAreaChart = () => {
     } finally {
       setLoading(prev => ({ ...prev, monthly_daily: false }));
     }
-  }, [token, monthlyDailyForm, monthlyDailyDateRange, psKey, formatDateForAPI]);
+  }, [monthlyDailyForm, monthlyDailyDateRange, psKey]);
 
-  // Fetch monthly data DIRECTLY to Solar API
+  // Fetch monthly data (simulated local mode)
   const fetchMonthlyData = useCallback(async () => {
-    if (!token) {
-      setError('No login token available');
-      return;
-    }
-
     setLoading(prev => ({ ...prev, monthly: true }));
     setError('');
 
     try {
-      const startYear = parseInt(monthRange.startYear);
-      const startMonth = parseInt(monthRange.startMonth);
-      let apiStartYear = startYear;
-      let apiStartMonth = startMonth - 1;
-      if (apiStartMonth <= 0) {
-        apiStartMonth = 12;
-        apiStartYear -= 1;
-      }
-
-      const startTime = `${apiStartYear}${apiStartMonth.toString().padStart(2, '0')}`;
-      const endTime = `${monthRange.endYear}${monthRange.endMonth}`;
-
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
+      const result = await mockSolarService.getDevicePointsDayMonthYearDataList({
+        ps_key: psKey || monthlyForm.ps_key,
         data_point: monthlyForm.data_point,
-        data_type: monthlyForm.data_type,
-        end_time: endTime,
-        lang: '_en_US',
-        order: monthlyForm.order,
-        ps_key_list: [psKey || monthlyForm.ps_key],
-        query_type: monthlyForm.query_type,
-        start_time: startTime,
-        sys_code: 207
-      };
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/getDevicePointsDayMonthYearDataList', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE,
-          'token': token
-        },
-        body: JSON.stringify(requestBody)
+        query_type: '2',
+        start_year: monthRange.startYear,
+        end_year: monthRange.endYear
       });
-
-      const result = await response.json();
 
       if (result.result_code === "1") {
         setMonthlyData(result);
@@ -828,50 +685,21 @@ const CombinedAreaChart = () => {
     } finally {
       setLoading(prev => ({ ...prev, monthly: false }));
     }
-  }, [token, monthlyForm, monthRange, psKey]);
+  }, [monthlyForm, monthRange, psKey]);
 
-  // Fetch yearly data DIRECTLY to Solar API
+  // Fetch yearly data (simulated local mode)
   const fetchYearlyData = useCallback(async () => {
-    if (!token) {
-      setError('No login token available');
-      return;
-    }
-
     setLoading(prev => ({ ...prev, yearly: true }));
     setError('');
 
     try {
-      const startYear = parseInt(yearRange.startYear);
-      const apiStartYear = (startYear - 1).toString();
-
-      const startTime = apiStartYear;
-      const endTime = yearRange.endYear;
-
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
+      const result = await mockSolarService.getDevicePointsDayMonthYearDataList({
+        ps_key: psKey || yearlyForm.ps_key,
         data_point: yearlyForm.data_point,
-        data_type: yearlyForm.data_type,
-        end_time: endTime,
-        lang: '_en_US',
-        order: yearlyForm.order,
-        ps_key_list: [psKey || yearlyForm.ps_key],
-        query_type: yearlyForm.query_type,
-        start_time: startTime,
-        sys_code: 207
-      };
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/getDevicePointsDayMonthYearDataList', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE,
-          'token': token
-        },
-        body: JSON.stringify(requestBody)
+        query_type: '3',
+        start_year: yearRange.startYear,
+        end_year: yearRange.endYear
       });
-
-      const result = await response.json();
 
       if (result.result_code === "1") {
         setYearlyData(result);

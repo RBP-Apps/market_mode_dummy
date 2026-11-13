@@ -6,12 +6,8 @@ import {
     Layers, Users, Download, LogIn, Wifi, WifiOff, X, Info
 } from "lucide-react";
 
-// Solar API Constants
-const SOLAR_APPKEY = import.meta.env.VITE_SOLAR_APP_KEY;
-const SOLAR_SECRET_KEY = import.meta.env.VITE_SOLAR_SECRET_KEY;
-const SOLAR_SYS_CODE = import.meta.env.VITE_SOLAR_SYS_CODE || '207';
-const USER_ACCOUNT = import.meta.env.VITE_USER_ACCOUNT;
-const USER_PASSWORD = import.meta.env.VITE_USER_PASSWORD;
+import mockSolarService from "../services/mockSolarService";
+import db from "../services/storageService";
 
 function AllGraph() {
     // 1. Google Sheet Data State
@@ -70,77 +66,31 @@ function AllGraph() {
         }, duration);
     }, []);
 
-    // 3. Fetch Inverter List from Google Sheet
+    // 3. Fetch Inverter List (simulated local mode)
     const fetchInverterDataFromSheet = async () => {
         try {
             setLoading(true);
             setError(null);
-            const sheetName = "Inverter_id";
-            const url = `https://script.google.com/macros/s/AKfycbzF4JjwpmtgsurRYkORyZvQPvRGc06VuBMCJM00wFbOOtVsSyFiUJx5xtb1J0P5ooyf/exec?sheet=${encodeURIComponent(sheetName)}&action=fetch`;
 
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Failed to fetch sheet: ${response.status}`);
+            const { data: rows, error: invErr } = await db.from("Inverter_id").select("*");
+            if (invErr) throw invErr;
 
-            const text = await response.text();
-            let data;
+            const processedData = (rows || []).map((row, index) => {
+                const inverterId = String(row.inverter_id || "").trim();
+                const beneficiaryName = String(row.beneficiary_name || "").trim();
+                const serialNo = String(row.serial_number || (index + 1).toString()).trim();
 
-            try {
-                // Try direct JSON parse first
-                data = JSON.parse(text);
-            } catch {
-                // Fallback: extract JSON from response
-                const jsonStart = text.indexOf("{");
-                const jsonEnd = text.lastIndexOf("}");
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    const jsonString = text.substring(jsonStart, jsonEnd + 1);
-                    data = JSON.parse(jsonString);
-                } else {
-                    throw new Error("Invalid JSON response from server");
-                }
-            }
-
-            let rows = [];
-
-            // Handle different response formats
-            if (data.table && data.table.rows) {
-                // Google Visualization API format
-                rows = data.table.rows;
-            } else if (Array.isArray(data)) {
-                // Direct array format
-                rows = data;
-            } else if (data.values) {
-                // Google Sheets API format
-                rows = data.values.map(row => ({ c: row.map(val => ({ v: val })) }));
-            }
-
-            const processedData = [];
-            rows.forEach((row, index) => {
-                if (index === 0) return; // Skip header row
-
-                let rowValues = [];
-                if (row.c) {
-                    rowValues = row.c.map(cell => cell?.v || "");
-                } else if (Array.isArray(row)) {
-                    rowValues = row;
-                }
-
-                const serialNo = String(rowValues[0] || "").trim();
-                const inverterId = String(rowValues[1] || "").trim();
-                const beneficiaryName = String(rowValues[2] || "").trim();
-
-                if (inverterId) {
-                    processedData.push({
-                        serialNo: serialNo || (index).toString(),
-                        inverterId,
-                        beneficiaryName,
-                    });
-                }
-            });
+                return {
+                    serialNo,
+                    inverterId,
+                    beneficiaryName
+                };
+            }).filter(inv => inv.inverterId);
 
             setInverterData(processedData);
-            console.log(`Loaded ${processedData.length} inverters from Google Sheet`);
+            console.log(`Loaded ${processedData.length} inverters from LocalStorage`);
         } catch (err) {
-            console.error("Sheet Fetch Error:", err);
+            console.error("Inverter Fetch Error:", err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -159,65 +109,40 @@ function AllGraph() {
         setProgress({ current: 0, total: 100, message: 'Starting cloud sync...' });
 
         try {
-            // A. Authenticate
+            // A. Authenticate (simulated local mode)
             let currentToken = token;
-            const tokenTimestamp = localStorage.getItem('solarTokenTimestamp');
-            const tokenAge = tokenTimestamp ? Date.now() - parseInt(tokenTimestamp) : Infinity;
-
-            if (!currentToken || tokenAge > 50 * 60 * 1000) {
-                setProgress({ current: 10, total: 100, message: 'Authenticating...' });
-                const loginResponse = await fetch('https://gateway.isolarcloud.com.hk/openapi/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-access-key': SOLAR_SECRET_KEY, 'sys_code': SOLAR_SYS_CODE },
-                    body: JSON.stringify({ appkey: SOLAR_APPKEY, user_account: USER_ACCOUNT, user_password: USER_PASSWORD })
-                });
-                const loginResult = await loginResponse.json();
-                if (loginResult.result_code !== "1") throw new Error(loginResult.result_msg);
-
+            if (!currentToken) {
+                setProgress({ current: 10, total: 100, message: 'Authenticating (local demo)...' });
+                const loginResult = await mockSolarService.login();
                 currentToken = loginResult.result_data.token;
                 setToken(currentToken);
                 localStorage.setItem('solarToken', currentToken);
                 localStorage.setItem('solarTokenTimestamp', Date.now().toString());
             }
 
-            // B. Fetch PS Keys (Devices) in batches of 10 using SNs from Google Sheet
+            // B. Fetch PS Keys (Devices) in batches of 10
             setProgress({ current: 30, total: 100, message: 'Mapping cloud devices...' });
             const snList = inverterData.map(inv => inv.inverterId.trim());
             const fetchedDevices = [];
 
             for (let i = 0; i < snList.length; i += 10) {
                 const batchSnList = snList.slice(i, i + 10);
-                setProgress({ current: Math.round(30 + (i / snList.length) * 30), total: 100, message: `Mapping cloud devices (${i + 1} to ${Math.min(i + 10, snList.length)})...` });
+                setProgress({ current: Math.round(30 + (i / snList.length) * 30), total: 100, message: `Mapping devices (${i + 1} to ${Math.min(i + 10, snList.length)})...` });
 
-                const deviceResponse = await fetch('https://gateway.isolarcloud.com.hk/openapi/getPVInverterRealTimeData', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json', 'x-access-key': SOLAR_SECRET_KEY,
-                        'sys_code': SOLAR_SYS_CODE, 'token': currentToken
-                    },
-                    body: JSON.stringify({ appkey: SOLAR_APPKEY, sn_list: batchSnList, lang: '_en_US', sys_code: 207 })
-                });
-
-                const devicesResult = await deviceResponse.json();
-                if (devicesResult.result_code !== "1") throw new Error(devicesResult.result_msg);
-
+                const devicesResult = await mockSolarService.getPVInverterRealTimeData({ sn_list: batchSnList });
                 const deviceList = devicesResult.result_data?.device_point_list || [];
 
                 deviceList.forEach(item => {
                     const dp = item.device_point;
                     if (dp && dp.ps_key) {
-                        const sn = dp.sn || dp.serial_number || dp.device_sn ||
-                            batchSnList.find(s => (dp.device_name?.includes(s)) || (dp.ps_key?.includes(s)));
-
-                        if (sn) {
-                            const sheetMatch = inverterData.find(inv => inv.inverterId.trim() === sn);
-                            fetchedDevices.push({
-                                serialNumber: sn || 'Unknown',
-                                psKey: dp.ps_key,
-                                deviceName: sheetMatch?.beneficiaryName || dp.device_name || sn,
-                                success: true
-                            });
-                        }
+                        const sn = dp.device_sn || dp.sn || batchSnList[0];
+                        const sheetMatch = inverterData.find(inv => inv.inverterId.trim() === sn);
+                        fetchedDevices.push({
+                            serialNumber: sn || 'Unknown',
+                            psKey: dp.ps_key,
+                            deviceName: sheetMatch?.beneficiaryName || dp.device_name || sn,
+                            success: true
+                        });
                     }
                 });
             }
@@ -225,7 +150,7 @@ function AllGraph() {
             setDevices(fetchedDevices);
             if (fetchedDevices.length === 0) throw new Error('Could not find cloud match for these inverters.');
 
-            // C. Fetch Yearly Data in batches of 10 (Lifecycle)
+            // C. Fetch Yearly Data in batches of 10
             setProgress({ current: 60, total: 100, message: 'Retrieving annual logs...' });
             const psKeyList = fetchedDevices.map(d => d.psKey);
             const newYearlyData = {};
@@ -235,28 +160,13 @@ function AllGraph() {
                 const batchPsKeyList = psKeyList.slice(i, i + 10);
                 setProgress({ current: Math.round(60 + (i / psKeyList.length) * 40), total: 100, message: `Retrieving annual logs (${i + 1} to ${Math.min(i + 10, psKeyList.length)})...` });
 
-                const historyResponse = await fetch('https://gateway.isolarcloud.com.hk/openapi/getDevicePointsDayMonthYearDataList', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json', 'x-access-key': SOLAR_SECRET_KEY,
-                        'sys_code': SOLAR_SYS_CODE, 'token': currentToken
-                    },
-                    body: JSON.stringify({
-                        appkey: SOLAR_APPKEY,
-                        data_point: yearlyForm.data_point,
-                        data_type: yearlyForm.data_type,
-                        end_time: yearRange.endYear.toString(),
-                        lang: '_en_US',
-                        order: yearlyForm.order,
-                        ps_key_list: batchPsKeyList,
-                        query_type: yearlyForm.query_type,
-                        start_time: yearRange.startYear.toString(),
-                        sys_code: 207
-                    })
+                const yearlyResult = await mockSolarService.getDevicePointsDayMonthYearDataList({
+                    ps_key_list: batchPsKeyList,
+                    data_point: yearlyForm.data_point,
+                    query_type: '3',
+                    start_year: yearRange.startYear.toString(),
+                    end_year: yearRange.endYear.toString()
                 });
-
-                const yearlyResult = await historyResponse.json();
-                if (yearlyResult.result_code !== "1") throw new Error(yearlyResult.result_msg);
 
                 const resultData = yearlyResult.result_data;
                 if (resultData) {
@@ -362,44 +272,15 @@ function AllGraph() {
         if (preset === '2000s') setYearRange({ startYear: 2000, endYear: 2009 });
     };
 
-    // Auto-login function (optimized with retry logic)
-    const handleAutoLogin = useCallback(async (retryCount = 0) => {
+    // Auto-login function (simulated local mode)
+    const handleAutoLogin = useCallback(async () => {
         if (loginLoading) return;
 
         setLoginLoading(true);
         setLoginError('');
 
         try {
-            if (!SOLAR_APPKEY || !SOLAR_SECRET_KEY || !USER_ACCOUNT || !USER_PASSWORD) {
-                throw new Error('Missing API credentials. Please check environment configuration.');
-            }
-
-            const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-access-key': SOLAR_SECRET_KEY,
-                    'sys_code': SOLAR_SYS_CODE
-                },
-                body: JSON.stringify({
-                    appkey: SOLAR_APPKEY,
-                    user_account: USER_ACCOUNT,
-                    user_password: USER_PASSWORD
-                })
-            });
-
-            const responseText = await response.text();
-            let result;
-
-            try {
-                result = JSON.parse(responseText);
-            } catch (e) {
-                throw new Error('Invalid server response. Please try again.');
-            }
-
-            if (!response.ok) {
-                throw new Error(`Server error (${response.status}): ${result.result_msg || 'Login failed'}`);
-            }
+            const result = await mockSolarService.login();
 
             if (result.result_code === "1") {
                 const newToken = result.result_data?.token || '';
@@ -410,29 +291,15 @@ function AllGraph() {
                 localStorage.setItem('solarToken', newToken);
                 localStorage.setItem('solarTokenTimestamp', Date.now().toString());
 
-                showToast('✓ Connected to Solar Cloud!', 'success');
-                console.log('Auto-login successful for AllGraph');
+                showToast('✓ Connected to Solar Cloud! (Demo Mode)', 'success');
+                console.log('Auto-login successful for AllGraph (offline demo)');
                 return newToken;
             } else {
-                // Retry on busy server
-                if (result.result_msg?.includes('busy') && retryCount < 2) {
-                    showToast('Server busy, retrying...', 'info');
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    return handleAutoLogin(retryCount + 1);
-                }
                 throw new Error(result.result_msg || 'Login failed');
             }
         } catch (err) {
             console.error('Auto-login error:', err);
-
-            // Retry on network errors
-            if (retryCount < 2) {
-                showToast(`Connection attempt ${retryCount + 1} failed. Retrying...`, 'info');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return handleAutoLogin(retryCount + 1);
-            }
-
-            setLoginError(err.message || 'Unable to connect to server');
+            setLoginError(err.message || 'Unable to connect');
             setLoginSuccess(false);
             showToast(`⚠ Login failed: ${err.message}`, 'error', 8000);
             return null;

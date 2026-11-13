@@ -1,17 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Key, Cpu, Search, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useDeviceContext } from './DeviceContext';
-import db from "../../services/storageService"
-
-// Environment variables
-const SOLAR_APPKEY = import.meta.env.VITE_SOLAR_APP_KEY;
-const SOLAR_SECRET_KEY = import.meta.env.VITE_SOLAR_SECRET_KEY;
-const SOLAR_SYS_CODE = import.meta.env.VITE_SOLAR_SYS_CODE || '207';
-const USER_ACCOUNT = import.meta.env.VITE_USER_ACCOUNT;
-const USER_PASSWORD = import.meta.env.VITE_USER_PASSWORD;
+import db from "../../services/storageService";
+import mockSolarService from "../../services/mockSolarService";
 
 // Google Sheets Config
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzF4JjwpmtgsurRYkORyZvQPvRGc06VuBMCJM00wFbOOtVsSyFiUJx5xtb1J0P5ooyf/exec";
 const SHEET_NAME = "Inverter_id";
 
 const AutoLogin = ({ onTokenChange, onDeviceDataChange, onBeneficiarySelect }) => {
@@ -283,44 +276,13 @@ const AutoLogin = ({ onTokenChange, onDeviceDataChange, onBeneficiarySelect }) =
     }, 150);
   };
 
-  // Direct login function
-  const handleLogin = async (retryCount = 0) => {
+  // Direct login function (simulated local mode)
+  const handleLogin = async () => {
     setLoading(prev => ({ ...prev, login: true }));
     setError('');
 
     try {
-      if (!SOLAR_APPKEY || !SOLAR_SECRET_KEY || !USER_ACCOUNT || !USER_PASSWORD) {
-        throw new Error('Missing API credentials. Please check environment variables.');
-      }
-
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
-        user_account: USER_ACCOUNT,
-        user_password: USER_PASSWORD
-      };
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      const responseText = await response.text();
-      let result;
-
-      try {
-        result = JSON.parse(responseText);
-      } catch (e) {
-        throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${result.result_msg || 'Login failed'}`);
-      }
+      const result = await mockSolarService.login();
 
       if (result.result_code === "1") {
         const newToken = result.result_data?.token || '';
@@ -330,41 +292,27 @@ const AutoLogin = ({ onTokenChange, onDeviceDataChange, onBeneficiarySelect }) =
         localStorage.setItem('solarToken', newToken);
         localStorage.setItem('solarTokenTimestamp', Date.now().toString());
 
-        console.log('Login successful, token:', newToken.substring(0, 20) + '...');
+        console.log('Login successful (offline demo), token:', newToken.substring(0, 20) + '...');
 
         // Fetch device data if serial number is set
         if (serialNumber) {
           fetchDeviceDataBySerial(newToken);
         }
       } else {
-        if (result.result_msg.includes('busy') && retryCount < 2) {
-          setTimeout(() => handleLogin(retryCount + 1), 2000);
-          return;
-        }
         setError(`Login failed: ${result.result_msg}`);
       }
     } catch (err) {
       console.error('Login error:', err);
-
-      if (retryCount < 2) {
-        setTimeout(() => handleLogin(retryCount + 1), 2000);
-        return;
-      }
       setError(err.message || 'Unknown login error');
     } finally {
       setLoading(prev => ({ ...prev, login: false }));
     }
   };
 
-  // Fetch device data by serial number
+  // Fetch device data by serial number (simulated local mode)
   const fetchDeviceDataBySerial = async (tokenParam, serialNumberParam = null) => {
     const actualToken = tokenParam || token;
     const actualSerialNumber = serialNumberParam || serialNumber;
-
-    if (!actualToken) {
-      setError('No login token available. Please login first.');
-      return;
-    }
 
     if (!actualSerialNumber || !actualSerialNumber.trim()) {
       setError('Please enter a serial number');
@@ -375,35 +323,14 @@ const AutoLogin = ({ onTokenChange, onDeviceDataChange, onBeneficiarySelect }) =
     setError('');
 
     try {
-      console.log('Fetching device data for serial:', actualSerialNumber);
-      console.log('Using token:', actualToken.substring(0, 20) + '...');
-
-      const requestBody = {
-        appkey: SOLAR_APPKEY,
-        sn_list: [actualSerialNumber.trim()],
-        lang: '_en_US',
-        sys_code: 207
-      };
-
-      const response = await fetch('https://gateway.isolarcloud.com.hk/openapi/getPVInverterRealTimeData', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-access-key': SOLAR_SECRET_KEY,
-          'sys_code': SOLAR_SYS_CODE,
-          'token': actualToken
-        },
-        body: JSON.stringify(requestBody)
+      const result = await mockSolarService.getPVInverterRealTimeData({
+        sn_list: [actualSerialNumber.trim()]
       });
-
-      const result = await response.json();
-      console.log('Device API Response:', result);
 
       if (result.result_code === "1") {
         const devicePoint = result.result_data?.device_point_list?.[0]?.device_point;
         if (devicePoint) {
           const newPsKey = devicePoint.ps_key;
-          console.log('Device data fetched successfully. PS Key:', newPsKey);
 
           // Update device data state
           setDeviceData(devicePoint);

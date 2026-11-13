@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import emailjs from "@emailjs/browser";
+import mockEmailService from "../services/mockEmailService";
 import QuotationPreview from "../components/layout/QuotationPreview";
 import db from "../services/storageService"
 import AdminLayout from "../components/layout/AdminLayout";
@@ -1009,16 +1009,11 @@ export default function QuatationCreate() {
         enquiry_number: quotationData.enquiryNumber,
         product_name: quotationData.presentLoad || "Solar System",
         quotation_link: quotationData.quotationCopy,
-        to_email: quotationData.email || "", // Need to ensure email is available
-        reply_to: import.meta.env.VITE_USER_ACCOUNT || "sahoo@rbpindia.com",
+        to_email: quotationData.email || "customer@example.com",
+        reply_to: "sahoo@rbpindia.com",
       };
 
-      const result = await emailjs.send(
-        import.meta.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || "service_mkdtlae",
-        import.meta.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || "template_quotation",
-        templateParams,
-        import.meta.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || "JN3T3k1LsQ0KSOn-A"
-      );
+      const result = await mockEmailService.sendEmail(templateParams);
       return result;
     } catch (error) {
       console.error("Email Send Error:", error);

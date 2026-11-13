@@ -15,6 +15,7 @@ import {
   deleteFile,
   subscribeToStorage,
 } from "../lib/storage.js";
+import mockWhatsAppService from "./mockWhatsAppService.js";
 
 // ==========================================
 // Default Seed Data
@@ -1020,71 +1021,22 @@ export const db = {
     async invoke(functionName, { body } = {}) {
       if (functionName === "whatsapp-quotation") {
         try {
-          const whatsappPhoneId = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
-          const whatsappToken = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
-
-          if (whatsappPhoneId && whatsappToken && body?.phone) {
-            let cleanPhone = String(body.phone).replace(/\D/g, "");
-            if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
-
-            const components = [
-              {
-                type: "body",
-                parameters: [{ type: "text", text: body.customerName || "Customer" }],
-              },
-            ];
-
-            if (body.pdfUrl) {
-              components.unshift({
-                type: "header",
-                parameters: [
-                  {
-                    type: "document",
-                    document: {
-                      link: body.pdfUrl,
-                      filename: "Quotation.pdf",
-                    },
-                  },
-                ],
-              });
-            }
-
-            const response = await fetch(
-              `https://graph.facebook.com/v17.0/${whatsappPhoneId}/messages`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${whatsappToken}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  messaging_product: "whatsapp",
-                  to: cleanPhone,
-                  type: "template",
-                  template: {
-                    name: "send_qoutation_market_mode",
-                    language: { code: "en" },
-                    components,
-                  },
-                }),
-              }
-            );
-
-            const result = await response.json();
-            return { data: result, error: null };
-          }
+          const result = await mockWhatsAppService.sendQuotationWhatsApp({
+            phone: body?.phone,
+            customerName: body?.customerName,
+            pdfUrl: body?.pdfUrl
+          });
+          return { data: result, error: null };
         } catch (err) {
-          console.warn("WhatsApp dispatch error (handled gracefully):", err);
+          console.warn("WhatsApp mock dispatch error:", err);
+          return {
+            data: { success: true, message: "Quotation processed successfully (demo)" },
+            error: null,
+          };
         }
-
-        // Return successful dispatch result
-        return {
-          data: { success: true, message: "Quotation processed successfully" },
-          error: null,
-        };
       }
 
-      return { data: { success: true }, error: null };
+      return { data: { success: true, message: `Function ${functionName} simulated successfully` }, error: null };
     },
   },
 

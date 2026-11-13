@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useDeviceContext } from './DeviceContext'; // Add this import
+import { useDeviceContext } from './DeviceContext';
+import mockSolarService from '../../services/mockSolarService';
 
 const DeviceData = () => {
   // Get context functions
@@ -26,37 +27,26 @@ const DeviceData = () => {
     }
   }, [autoFetch]);
 
-  // Handle login
+  // Handle login (simulated local mode)
   const handleLogin = async () => {
     setLoginLoading(true);
     setLoginError(null);
     setLoginData(null);
-    setDeviceDataLocal(null); // Clear device data on new login
+    setDeviceDataLocal(null);
 
     try {
-      const response = await fetch('http://localhost:3000/api/solar/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_account: 'sahoo@rbpindia.com',
-          user_password: 'rbpindia@2025'
-        })
-      });
+      const data = await mockSolarService.login();
 
-      const data = await response.json();
-
-      if (!response.ok || data.result_code !== "1") {
+      if (data.result_code !== "1") {
         throw new Error(data.result_msg || 'Login failed');
       }
 
       setLoginData(data);
-      console.log('Login successful, token:', data.result_data?.token?.substring(0, 30) + '...');
+      console.log('Login successful (offline demo)');
 
       // Automatically fetch device data if login successful
       if (data.result_data?.token && serialNumber) {
-        setTimeout(() => handleFetchDeviceData(data.result_data.token), 500);
+        setTimeout(() => handleFetchDeviceData(data.result_data.token), 300);
       }
     } catch (err) {
       setLoginError(err.message);
@@ -66,15 +56,8 @@ const DeviceData = () => {
     }
   };
 
-  // Handle device data fetch
+  // Retrieve device data (simulated local mode)
   const handleFetchDeviceData = async (token) => {
-    const actualToken = token || (loginData?.result_data?.token);
-
-    if (!actualToken) {
-      setDeviceError('No token available. Please login first.');
-      return;
-    }
-
     if (!serialNumber.trim()) {
       setDeviceError('Please enter a serial number');
       return;
@@ -85,32 +68,22 @@ const DeviceData = () => {
     setDeviceDataLocal(null);
 
     try {
-      const response = await fetch('http://localhost:3000/api/solar/inverter-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token: actualToken,
-          sn_list: [serialNumber.trim()]
-        })
+      const data = await mockSolarService.getPVInverterRealTimeData({
+        sn_list: [serialNumber.trim()]
       });
 
-      const data = await response.json();
-
-      if (!response.ok || data.result_code !== "1") {
+      if (data.result_code !== "1") {
         throw new Error(data.result_msg || 'Failed to fetch device data');
       }
 
       setDeviceDataLocal(data);
-      console.log('Device data fetched successfully');
+      console.log('Device data fetched successfully (offline demo)');
 
       // Share device data with context
       if (data.result_data?.device_point_list?.[0]?.device_point) {
         const devicePoint = data.result_data.device_point_list[0].device_point;
         setDeviceData(devicePoint); // Share device data
         setPsKey(devicePoint.ps_key); // Share ps_key
-        console.log('Shared ps_key:', devicePoint.ps_key);
       }
 
     } catch (err) {
